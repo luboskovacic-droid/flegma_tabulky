@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Databaza jedal</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #16202a;
+      --muted: #667085;
+      --line: #d8dee6;
+      --focus: #1d6fb8;
+      --danger: #b42318;
+      --danger-bg: #fff1f0;
+      --ok: #146c43;
+      --ok-bg: #eaf7ef;
+      --shadow: 0 10px 24px rgba(22, 32, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 20px));
+      margin: 0 auto;
+      padding: 14px 0 86px;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      max-width: 680px;
+      font-size: 14px;
+    }
+
+    .status {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: left;
+      font-size: 14px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .form-panel {
+      padding: 14px;
+    }
+
+    .panel-title {
+      margin: 0 0 12px;
+      font-size: 19px;
+    }
+
+    form {
+      display: grid;
+      gap: 10px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 11px;
+      color: var(--text);
+      background: #fff;
+      font: 16px Arial, Helvetica, sans-serif;
+    }
+
+    input:focus,
+    button:focus {
+      outline: 3px solid rgba(29, 111, 184, 0.18);
+      border-color: var(--focus);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    button {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: #fff;
+      color: var(--text);
+      font: 700 15px Arial, Helvetica, sans-serif;
+      font-weight: 700;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    button:hover {
+      border-color: #9aa4b2;
+    }
+
+    .primary {
+      border-color: var(--focus);
+      background: var(--focus);
+      color: #fff;
+    }
+
+    .danger {
+      border-color: #f0b7b2;
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .table-panel {
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: stretch;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .search {
+      max-width: none;
+    }
+
+    .suggest-wrap {
+      position: relative;
+      display: grid;
+      gap: 6px;
+    }
+
+    .suggest-label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .table-wrap {
+      display: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    th,
+    td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #344054;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    th:first-child,
+    td:first-child {
+      text-align: left;
+      white-space: normal;
+      min-width: 180px;
+    }
+
+    tr:hover td {
+      background: #fbfcfd;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .card-list {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .food-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .food-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .food-name {
+      min-width: 0;
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .kcal-pill {
+      flex: 0 0 auto;
+      padding: 6px 8px;
+      border-radius: 999px;
+      background: #edf5ff;
+      color: #175cd3;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .nutrition-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--line);
+    }
+
+    .nutrition-item {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+      padding: 10px 12px;
+      background: #fff;
+    }
+
+    .nutrition-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .nutrition-value {
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 10px 12px 12px;
+    }
+
+    .empty {
+      padding: 28px 14px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .notice {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      background: var(--ok-bg);
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    .notice.is-visible {
+      display: block;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 390px) {
+      .app {
+        width: min(100% - 14px, 1180px);
+      }
+
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .nutrition-grid,
+      .card-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (min-width: 760px) {
+      .app {
+        width: min(1180px, calc(100% - 32px));
+        padding: 28px 0 40px;
+      }
+
+      header {
+        flex-direction: row;
+        align-items: end;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      h1 {
+        font-size: clamp(34px, 4vw, 42px);
+      }
+
+      .subtitle {
+        font-size: 16px;
+      }
+
+      .status {
+        width: auto;
+        min-width: 190px;
+        text-align: right;
+      }
+
+      .layout {
+        grid-template-columns: 360px 1fr;
+        gap: 18px;
+      }
+
+      .form-panel {
+        padding: 18px;
+        position: sticky;
+        top: 16px;
+      }
+
+      .actions,
+      .toolbar {
+        flex-direction: row;
+      }
+
+      .toolbar {
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px;
+      }
+
+      .search {
+        max-width: 360px;
+      }
+
+      button {
+        width: auto;
+      }
+
+      .table-wrap {
+        display: block;
+        overflow-x: auto;
+      }
+
+      .card-list {
+        display: none;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html" aria-current="page">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+  <main class="app">
+    <header>
+      <div>
+        <h1>Databaza jedal</h1>
+        <p class="subtitle">Lokalny zoznam potravin na 100 g. Funguje bez prihlasenia a uklada sa do prehliadaca na tomto zariadeni.</p>
+      </div>
+      <div class="status" id="status">0 jedal v databaze</div>
+    </header>
+
+    <section class="layout">
+      <aside class="panel form-panel">
+        <h2 class="panel-title" id="formTitle">Pridat jedlo</h2>
+        <form id="foodForm" autocomplete="off">
+          <input type="hidden" id="foodId">
+
+          <label>
+            Jedlo
+            <input id="name" name="name" required maxlength="80" placeholder="napr. Kuracie prsia">
+          </label>
+
+          <div class="grid-2">
+            <label>
+              kcal / 100 g
+              <input id="kcal" name="kcal" required type="number" min="0" step="0.1" inputmode="decimal">
+            </label>
+            <label>
+              Bielkoviny
+              <input id="protein" name="protein" required type="number" min="0" step="0.1" inputmode="decimal">
+            </label>
+          </div>
+
+          <div class="grid-2">
+            <label>
+              Sacharidy
+              <input id="carbs" name="carbs" required type="number" min="0" step="0.1" inputmode="decimal">
+            </label>
+            <label>
+              Tuky
+              <input id="fat" name="fat" required type="number" min="0" step="0.1" inputmode="decimal">
+            </label>
+          </div>
+
+          <div class="grid-2">
+            <label>
+              Cukry
+              <input id="sugar" name="sugar" required type="number" min="0" step="0.1" inputmode="decimal">
+            </label>
+            <label>
+              Vlaknina
+              <input id="fiber" name="fiber" required type="number" min="0" step="0.1" inputmode="decimal">
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="primary" type="submit" id="saveButton">Ulozit</button>
+            <button type="button" id="resetButton">Zrusit</button>
+          </div>
+        </form>
+        <div class="notice" id="notice" role="status"></div>
+        <p class="muted">Hodnoty bielkovin, sacharidov, tukov, cukrov a vlakniny su v gramoch na 100 g.</p>
+      </aside>
+
+      <section class="panel table-panel">
+        <div class="toolbar">
+          <label class="suggest-wrap">
+            <span class="suggest-label">Nasepkavac</span>
+            <input class="search" id="search" list="foodSuggestions" placeholder="Zacni pisat nazov jedla..." aria-label="Naspkavac jedal">
+          </label>
+          <datalist id="foodSuggestions"></datalist>
+          <button type="button" id="clearAllButton" class="danger">Vymazat vsetko</button>
+        </div>
+
+        <div class="card-list" id="foodCards"></div>
+        <div class="table-wrap" id="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Jedlo</th>
+                <th>kcal</th>
+                <th>Bielkoviny</th>
+                <th>Sacharidy</th>
+                <th>Tuky</th>
+                <th>Cukry</th>
+                <th>Vlaknina</th>
+                <th>Akcie</th>
+              </tr>
+            </thead>
+            <tbody id="foodRows"></tbody>
+          </table>
+        </div>
+        <div class="empty" id="emptyState">Zatial tu nie je ziadne jedlo.</div>
+      </section>
+    </section>
+  </main>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script>
+    const STORAGE_KEY = 'flegma_tabulky_foods_v1';
+    const DEFAULT_FOODS = [
+      { id: 'seed-kuracie-prsia', name: 'Kuracie prsia', kcal: 110, protein: 23, carbs: 0, fat: 2, sugar: 0, fiber: 0 },
+      { id: 'seed-vajce', name: 'Vajce', kcal: 143, protein: 13, carbs: 1.1, fat: 9.5, sugar: 1.1, fiber: 0 },
+      { id: 'seed-ryza-varena', name: 'Ryza varena', kcal: 130, protein: 2.7, carbs: 28, fat: 0.3, sugar: 0.1, fiber: 0.4 },
+      { id: 'seed-zemiaky-varene', name: 'Zemiaky varene', kcal: 87, protein: 1.9, carbs: 20, fat: 0.1, sugar: 0.9, fiber: 1.8 },
+      { id: 'seed-cestoviny-varene', name: 'Cestoviny varene', kcal: 158, protein: 5.8, carbs: 31, fat: 0.9, sugar: 0.6, fiber: 1.8 },
+      { id: 'seed-ovsene-vlocky', name: 'Ovsene vlocky', kcal: 372, protein: 13.5, carbs: 58.7, fat: 7, sugar: 1, fiber: 10 },
+      { id: 'seed-banany', name: 'Banan', kcal: 89, protein: 1.1, carbs: 22.8, fat: 0.3, sugar: 12.2, fiber: 2.6 },
+      { id: 'seed-jablko', name: 'Jablko', kcal: 52, protein: 0.3, carbs: 13.8, fat: 0.2, sugar: 10.4, fiber: 2.4 },
+      { id: 'seed-tvaroh', name: 'Tvaroh jemny nizkotucny', kcal: 68, protein: 12, carbs: 3.8, fat: 0.5, sugar: 3.8, fiber: 0 },
+      { id: 'seed-grecky-jogurt', name: 'Grecky jogurt biely', kcal: 97, protein: 9, carbs: 3.6, fat: 5, sugar: 3.6, fiber: 0 },
+      { id: 'seed-chlieb', name: 'Chlieb celozrnny', kcal: 247, protein: 8.8, carbs: 41, fat: 3.5, sugar: 4.8, fiber: 7 },
+      { id: 'seed-sunka', name: 'Sunka bravcova', kcal: 145, protein: 20, carbs: 1.5, fat: 6, sugar: 1, fiber: 0 },
+      { id: 'seed-syr-eidam', name: 'Syr Eidam 30%', kcal: 263, protein: 27, carbs: 1.5, fat: 16, sugar: 1.5, fiber: 0 },
+      { id: 'seed-losos', name: 'Losos', kcal: 208, protein: 20, carbs: 0, fat: 13, sugar: 0, fiber: 0 },
+      { id: 'seed-olivovy-olej', name: 'Olivovy olej', kcal: 884, protein: 0, carbs: 0, fat: 100, sugar: 0, fiber: 0 }
+    ];
+
+    const fields = ['name', 'kcal', 'protein', 'carbs', 'fat', 'sugar', 'fiber'];
+    const state = {
+      foods: loadFoods(),
+      search: ''
+    };
+
+    const foodForm = document.getElementById('foodForm');
+    const foodRows = document.getElementById('foodRows');
+    const foodCards = document.getElementById('foodCards');
+    const foodId = document.getElementById('foodId');
+    const formTitle = document.getElementById('formTitle');
+    const saveButton = document.getElementById('saveButton');
+    const resetButton = document.getElementById('resetButton');
+    const search = document.getElementById('search');
+    const foodSuggestions = document.getElementById('foodSuggestions');
+    const clearAllButton = document.getElementById('clearAllButton');
+    const tableWrap = document.getElementById('tableWrap');
+    const emptyState = document.getElementById('emptyState');
+    const status = document.getElementById('status');
+    const notice = document.getElementById('notice');
+
+    foodForm.addEventListener('submit', handleSubmit);
+    resetButton.addEventListener('click', resetForm);
+    clearAllButton.addEventListener('click', clearAllFoods);
+    search.addEventListener('input', () => {
+      state.search = search.value.trim().toLowerCase();
+      render();
+    });
+
+    render();
+
+    function handleSubmit(event) {
+      event.preventDefault();
+
+      const food = readForm();
+      const editedId = foodId.value;
+
+      if (editedId) {
+        state.foods = state.foods.map((item) => item.id === editedId ? { ...food, id: editedId } : item);
+        showNotice('Jedlo bolo upravene.');
+      } else {
+        state.foods = [{ ...food, id: crypto.randomUUID() }, ...state.foods];
+        showNotice('Jedlo bolo pridane.');
+      }
+
+      saveFoods();
+      resetForm();
+      render();
+    }
+
+    function readForm() {
+      return {
+        name: document.getElementById('name').value.trim(),
+        kcal: readNumber('kcal'),
+        protein: readNumber('protein'),
+        carbs: readNumber('carbs'),
+        fat: readNumber('fat'),
+        sugar: readNumber('sugar'),
+        fiber: readNumber('fiber')
+      };
+    }
+
+    function readNumber(id) {
+      const value = Number.parseFloat(document.getElementById(id).value.replace(',', '.'));
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    function editFood(id) {
+      const food = state.foods.find((item) => item.id === id);
+      if (!food) return;
+
+      fields.forEach((field) => {
+        document.getElementById(field).value = food[field];
+      });
+
+      foodId.value = food.id;
+      formTitle.textContent = 'Upravit jedlo';
+      saveButton.textContent = 'Ulozit zmeny';
+      document.querySelector('.form-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('name').focus();
+    }
+
+    function deleteFood(id) {
+      const food = state.foods.find((item) => item.id === id);
+      if (!food) return;
+
+      if (!confirm(`Vymazat jedlo "${food.name}"?`)) return;
+
+      state.foods = state.foods.filter((item) => item.id !== id);
+      saveFoods();
+      resetForm();
+      showNotice('Jedlo bolo vymazane.');
+      render();
+    }
+
+    function clearAllFoods() {
+      if (!state.foods.length) return;
+      if (!confirm('Naozaj vymazat celu databazu jedal?')) return;
+
+      state.foods = [];
+      saveFoods();
+      resetForm();
+      showNotice('Databaza bola vymazana.');
+      render();
+    }
+
+    function resetForm() {
+      foodForm.reset();
+      foodId.value = '';
+      formTitle.textContent = 'Pridat jedlo';
+      saveButton.textContent = 'Ulozit';
+    }
+
+    function render() {
+      const visibleFoods = state.foods.filter((food) => {
+        return !state.search || food.name.toLowerCase().includes(state.search);
+      });
+
+      foodSuggestions.innerHTML = state.foods
+        .map((food) => `<option value="${escapeHtml(food.name)}"></option>`)
+        .join('');
+
+      foodRows.innerHTML = visibleFoods.map((food) => {
+        return `
+          <tr>
+            <td>${escapeHtml(food.name)}</td>
+            <td>${formatNumber(food.kcal)}</td>
+            <td>${formatNumber(food.protein)} g</td>
+            <td>${formatNumber(food.carbs)} g</td>
+            <td>${formatNumber(food.fat)} g</td>
+            <td>${formatNumber(food.sugar)} g</td>
+            <td>${formatNumber(food.fiber)} g</td>
+            <td>
+              <div class="row-actions">
+                <button type="button" onclick="editFood('${food.id}')">Upravit</button>
+                <button type="button" class="danger" onclick="deleteFood('${food.id}')">Vymazat</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      foodCards.innerHTML = visibleFoods.map((food) => {
+        return `
+          <article class="food-card">
+            <div class="food-card-header">
+              <h3 class="food-name">${escapeHtml(food.name)}</h3>
+              <span class="kcal-pill">${formatNumber(food.kcal)} kcal</span>
+            </div>
+            <div class="nutrition-grid">
+              ${nutritionItem('Bielkoviny', food.protein)}
+              ${nutritionItem('Sacharidy', food.carbs)}
+              ${nutritionItem('Tuky', food.fat)}
+              ${nutritionItem('Cukry', food.sugar)}
+              ${nutritionItem('Vlaknina', food.fiber)}
+            </div>
+            <div class="card-actions">
+              <button type="button" onclick="editFood('${food.id}')">Upravit</button>
+              <button type="button" class="danger" onclick="deleteFood('${food.id}')">Vymazat</button>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      tableWrap.hidden = !visibleFoods.length;
+      foodCards.hidden = !visibleFoods.length;
+      emptyState.hidden = Boolean(visibleFoods.length);
+      status.textContent = `${state.foods.length} ${pluralizeFoods(state.foods.length)} v databaze`;
+    }
+
+    function nutritionItem(label, value) {
+      return `
+        <div class="nutrition-item">
+          <span class="nutrition-label">${label}</span>
+          <span class="nutrition-value">${formatNumber(value)} g</span>
+        </div>
+      `;
+    }
+
+    function loadFoods() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const foods = raw ? JSON.parse(raw) : [];
+        const mergedFoods = mergeDefaultFoods(foods);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedFoods));
+        return mergedFoods;
+      } catch {
+        return DEFAULT_FOODS;
+      }
+    }
+
+    function mergeDefaultFoods(foods) {
+      const existingNames = new Set(foods.map((food) => food.name.toLowerCase()));
+      const missingDefaults = DEFAULT_FOODS.filter((food) => !existingNames.has(food.name.toLowerCase()));
+      return [...foods, ...missingDefaults];
+    }
+
+    function saveFoods() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.foods));
+    }
+
+    function formatNumber(value) {
+      return Number(value).toLocaleString('sk-SK', {
+        maximumFractionDigits: 1
+      });
+    }
+
+    function pluralizeFoods(count) {
+      if (count === 1) return 'jedlo';
+      if (count > 1 && count < 5) return 'jedla';
+      return 'jedal';
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function showNotice(message) {
+      notice.textContent = message;
+      notice.classList.add('is-visible');
+      window.clearTimeout(showNotice.timeout);
+      showNotice.timeout = window.setTimeout(() => {
+        notice.classList.remove('is-visible');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>

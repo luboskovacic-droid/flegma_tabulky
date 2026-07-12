@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kalendar treningov</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #16202a;
+      --muted: #667085;
+      --line: #d8dee6;
+      --focus: #1d6fb8;
+      --danger: #b42318;
+      --danger-bg: #fff1f0;
+      --shadow: 0 10px 24px rgba(22, 32, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 20px));
+      margin: 0 auto;
+      padding: 14px 0 86px;
+    }
+
+    header {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle,
+    .muted {
+      color: var(--muted);
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      font-size: 14px;
+    }
+
+    .top-link,
+    .card-link {
+      color: var(--focus);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .panel,
+    .training-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-inner {
+      padding: 14px;
+    }
+
+    .panel-title {
+      margin: 0 0 12px;
+      font-size: 19px;
+    }
+
+    form,
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 11px;
+      color: var(--text);
+      background: #fff;
+      font: 16px Arial, Helvetica, sans-serif;
+    }
+
+    textarea {
+      min-height: 76px;
+      resize: vertical;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus,
+    button:focus {
+      outline: 3px solid rgba(29, 111, 184, 0.18);
+      border-color: var(--focus);
+    }
+
+    button {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: #fff;
+      color: var(--text);
+      font: 700 15px Arial, Helvetica, sans-serif;
+      cursor: pointer;
+    }
+
+    .primary {
+      border-color: var(--focus);
+      background: var(--focus);
+      color: #fff;
+    }
+
+    .danger {
+      border-color: #f0b7b2;
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .training-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      box-shadow: none;
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 18px;
+      overflow-wrap: anywhere;
+    }
+
+    .badge {
+      padding: 6px 8px;
+      border-radius: 999px;
+      background: #edf5ff;
+      color: #175cd3;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .meta {
+      display: grid;
+      gap: 2px;
+      padding: 8px;
+      border-radius: 6px;
+      background: #f8fafc;
+    }
+
+    .meta span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .empty {
+      padding: 28px 14px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 390px) {
+      .grid-2,
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (min-width: 760px) {
+      .app {
+        width: min(1180px, calc(100% - 32px));
+        padding: 28px 0 40px;
+      }
+
+      h1 {
+        font-size: clamp(34px, 4vw, 42px);
+      }
+
+      .subtitle {
+        font-size: 16px;
+      }
+
+      .layout {
+        grid-template-columns: 390px 1fr;
+        gap: 18px;
+      }
+
+      .form-panel {
+        position: sticky;
+        top: 16px;
+      }
+
+      .panel-inner {
+        padding: 18px;
+      }
+
+      .meta-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      button {
+        width: auto;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html" aria-current="page">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+  <main class="app">
+    <header>
+      <div>
+        <h1>Kalendar treningov</h1>
+        <p class="subtitle">Plan treningov a sutazi pre cyklistiku, fitko, beh, plavanie, brick a dua/aqua/triatlon.</p>
+      </div>
+    </header>
+
+    <section class="layout">
+      <aside class="panel form-panel">
+        <div class="panel-inner">
+          <h2 class="panel-title">Pridat plan</h2>
+          <form id="trainingForm" autocomplete="off">
+            <label>
+              Nazov
+              <input id="title" required placeholder="napr. dlhy bike Z2">
+            </label>
+
+            <div class="grid-2">
+              <label>
+                Datum
+                <input id="date" type="date" required>
+              </label>
+              <label>
+                Cas startu
+                <input id="startTime" type="time" value="09:00">
+              </label>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Typ
+                <select id="type">
+                  <option value="fitko">Fitko</option>
+                  <option value="bike">Bicyklovanie</option>
+                  <option value="run">Beh</option>
+                  <option value="swim">Plavanie</option>
+                  <option value="brick">Brick</option>
+                  <option value="multi">Dua-aqua-triat</option>
+                  <option value="race">Sutaz</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Fitko rezim
+                <select id="gymMode">
+                  <option value="none">-</option>
+                  <option value="summer">Letny cyklo rezim</option>
+                  <option value="winter">Zimny silovy rezim</option>
+                </select>
+              </label>
+              <label>
+                Intenzita
+                <select id="intensity">
+                  <option value="easy">Lahka Z1-Z2</option>
+                  <option value="steady">Stredna Z2-Z3</option>
+                  <option value="hard">Tazka Z3-Z5</option>
+                  <option value="race">Sutazna</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Plan minut
+                <input id="plannedMinutes" type="number" min="10" max="1000" step="5" value="60" required>
+              </label>
+              <label>
+                Sacharidy g/h automaticky
+                <input id="carbsPerHour" type="number" min="0" max="140" step="5" value="30" readonly>
+              </label>
+            </div>
+            <div class="muted" id="carbPreview">Odhad: 30 g/h, spolu 30 g.</div>
+
+            <label>
+              Poznamka
+              <textarea id="notes" placeholder="trasa, ciel, intervaly, vybava"></textarea>
+            </label>
+
+            <button class="primary" type="submit">Ulozit plan</button>
+          </form>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-inner">
+          <h2 class="panel-title">Plany</h2>
+          <div class="list" id="trainingList"></div>
+          <div class="empty" id="emptyState">Zatial nemas ziadny trening alebo sutaz.</div>
+        </div>
+      </section>
+    </section>
+  </main>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script>
+    const STORAGE_KEY = 'flegma_tabulky_trainings_v1';
+    const state = {
+      trainings: loadTrainings()
+    };
+
+    const form = document.getElementById('trainingForm');
+    const list = document.getElementById('trainingList');
+    const emptyState = document.getElementById('emptyState');
+    const typeInput = document.getElementById('type');
+    const intensityInput = document.getElementById('intensity');
+    const plannedMinutesInput = document.getElementById('plannedMinutes');
+    const carbsPerHourInput = document.getElementById('carbsPerHour');
+    const carbPreview = document.getElementById('carbPreview');
+    document.getElementById('date').value = today();
+
+    typeInput.addEventListener('change', updateCarbEstimate);
+    intensityInput.addEventListener('change', updateCarbEstimate);
+    plannedMinutesInput.addEventListener('input', updateCarbPreview);
+    carbsPerHourInput.addEventListener('input', updateCarbPreview);
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      addTraining();
+    });
+
+    updateCarbEstimate();
+    render();
+
+    function addTraining() {
+      const training = {
+        id: crypto.randomUUID(),
+        title: value('title'),
+        date: value('date'),
+        startTime: value('startTime') || '09:00',
+        type: value('type'),
+        gymMode: value('gymMode'),
+        intensity: value('intensity'),
+        plannedMinutes: readNumber('plannedMinutes'),
+        carbsPerHour: calculateCarbsPerHour(value('type'), value('intensity')),
+        carbRule: 'auto-intensity',
+        notes: value('notes'),
+        actual: null,
+        createdAt: new Date().toISOString()
+      };
+
+      state.trainings.unshift(training);
+      saveTrainings();
+      form.reset();
+      document.getElementById('date').value = today();
+      document.getElementById('startTime').value = '09:00';
+      document.getElementById('plannedMinutes').value = 60;
+      updateCarbEstimate();
+      render();
+    }
+
+    function deleteTraining(id) {
+      const training = state.trainings.find((item) => item.id === id);
+      if (!training) return;
+      if (!confirm(`Vymazat plan "${training.title}"?`)) return;
+      state.trainings = state.trainings.filter((item) => item.id !== id);
+      saveTrainings();
+      render();
+    }
+
+    function render() {
+      const sorted = [...state.trainings].sort((a, b) => `${a.date}`.localeCompare(`${b.date}`));
+      list.innerHTML = sorted.map((training) => `
+        <article class="training-card">
+          <div class="card-head">
+            <div>
+              <h3 class="card-title">${escapeHtml(training.title)}</h3>
+              <div class="muted">${escapeHtml(training.date)} ${escapeHtml(training.startTime || '')} - ${typeLabel(training.type)}</div>
+            </div>
+            <span class="badge">${intensityLabel(training.intensity)}</span>
+          </div>
+          <div class="meta-grid">
+            ${meta('Plan', `${formatNumber(training.plannedMinutes)} min`)}
+            ${meta('Sacharidy', `${formatNumber(training.carbsPerHour)} g/h`)}
+            ${meta('Spolu S', `${formatNumber(totalTrainingCarbs(training))} g`)}
+            ${meta('Fitko', gymLabel(training.gymMode))}
+            ${meta('Realita', training.actual ? `${formatNumber(training.actual.durationMinutes)} min` : '-')}
+          </div>
+          <div>
+            <a class="card-link" href="training.html?id=${encodeURIComponent(training.id)}">Otvorit detail</a>
+            <button type="button" class="danger" onclick="deleteTraining('${training.id}')">Vymazat</button>
+          </div>
+        </article>
+      `).join('');
+
+      emptyState.hidden = Boolean(sorted.length);
+      list.hidden = !sorted.length;
+    }
+
+    function updateCarbEstimate() {
+      const carbsPerHour = calculateCarbsPerHour(value('type'), value('intensity'));
+      carbsPerHourInput.value = carbsPerHour;
+      updateCarbPreview();
+    }
+
+    function updateCarbPreview() {
+      const plannedMinutes = readNumber('plannedMinutes');
+      const carbsPerHour = readNumber('carbsPerHour');
+      const totalCarbs = carbsPerHour * (plannedMinutes / 60);
+      carbPreview.textContent = `Odhad: ${formatNumber(carbsPerHour)} g/h, spolu ${formatNumber(totalCarbs)} g.`;
+    }
+
+    function calculateCarbsPerHour(type, intensity) {
+      const baseByIntensity = {
+        easy: 30,
+        steady: 60,
+        hard: 80,
+        race: 90
+      };
+      const typeAdjustment = {
+        fitko: -20,
+        bike: 0,
+        run: -10,
+        swim: -15,
+        brick: 10,
+        multi: 15,
+        race: 20
+      };
+      const base = baseByIntensity[intensity] ?? 60;
+      const adjustment = typeAdjustment[type] ?? 0;
+      return clamp(roundToFive(base + adjustment), 0, 120);
+    }
+
+    function totalTrainingCarbs(training) {
+      return (training.carbsPerHour || 0) * ((training.plannedMinutes || 0) / 60);
+    }
+
+    function roundToFive(valueNumber) {
+      return Math.round(valueNumber / 5) * 5;
+    }
+
+    function clamp(valueNumber, min, max) {
+      return Math.min(max, Math.max(min, valueNumber));
+    }
+
+    function meta(label, valueText) {
+      return `
+        <div class="meta">
+          <span>${label}</span>
+          <strong>${valueText}</strong>
+        </div>
+      `;
+    }
+
+    function loadTrainings() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const trainings = raw ? JSON.parse(raw) : [];
+        const normalizedTrainings = trainings.map(normalizeTrainingCarbs);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedTrainings));
+        return normalizedTrainings;
+      } catch {
+        return [];
+      }
+    }
+
+    function normalizeTrainingCarbs(training) {
+      return {
+        ...training,
+        startTime: training.startTime || '09:00',
+        carbsPerHour: calculateCarbsPerHour(training.type, training.intensity),
+        carbRule: 'auto-intensity'
+      };
+    }
+
+    function saveTrainings() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.trainings));
+    }
+
+    function typeLabel(type) {
+      return {
+        fitko: 'Fitko',
+        bike: 'Bicyklovanie',
+        run: 'Beh',
+        swim: 'Plavanie',
+        brick: 'Brick',
+        multi: 'Dua-aqua-triat',
+        race: 'Sutaz'
+      }[type] || type;
+    }
+
+    function gymLabel(mode) {
+      return {
+        summer: 'Letny',
+        winter: 'Zimny',
+        none: '-'
+      }[mode] || '-';
+    }
+
+    function intensityLabel(intensity) {
+      return {
+        easy: 'lahka',
+        steady: 'stredna',
+        hard: 'tazka',
+        race: 'sutaz'
+      }[intensity] || intensity;
+    }
+
+    function today() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function value(id) {
+      return document.getElementById(id).value.trim();
+    }
+
+    function readNumber(id) {
+      const number = Number.parseFloat(value(id).replace(',', '.'));
+      return Number.isFinite(number) ? number : 0;
+    }
+
+    function formatNumber(value) {
+      return Number(value).toLocaleString('sk-SK', { maximumFractionDigits: 1 });
+    }
+
+    function escapeHtml(valueText) {
+      return String(valueText)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+  </script>
+</body>
+</html>

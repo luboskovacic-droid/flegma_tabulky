@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FIT import</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #16202a;
+      --muted: #667085;
+      --line: #d8dee6;
+      --focus: #1d6fb8;
+      --danger: #b42318;
+      --danger-bg: #fff1f0;
+      --ok: #146c43;
+      --ok-bg: #eaf7ef;
+      --warn-bg: #fff8e6;
+      --warn: #8a5a00;
+      --shadow: 0 10px 24px rgba(22, 32, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 20px));
+      margin: 0 auto;
+      padding: 14px 0 86px;
+    }
+
+    header {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle,
+    .muted {
+      color: var(--muted);
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      font-size: 14px;
+    }
+
+    .top-link,
+    .card-link {
+      color: var(--focus);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .panel,
+    .result-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-inner {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 19px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 11px;
+      color: var(--text);
+      background: #fff;
+      font: 16px Arial, Helvetica, sans-serif;
+    }
+
+    input:focus,
+    select:focus,
+    button:focus {
+      outline: 3px solid rgba(29, 111, 184, 0.18);
+      border-color: var(--focus);
+    }
+
+    button {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--focus);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: var(--focus);
+      color: #fff;
+      font: 700 15px Arial, Helvetica, sans-serif;
+      cursor: pointer;
+    }
+
+    .secondary {
+      border-color: var(--line);
+      background: #fff;
+      color: var(--text);
+    }
+
+    .danger {
+      border-color: #f0b7b2;
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .result-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      box-shadow: none;
+    }
+
+    .result-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .result-title {
+      margin: 0;
+      font-size: 18px;
+      overflow-wrap: anywhere;
+    }
+
+    .badge {
+      padding: 6px 8px;
+      border-radius: 999px;
+      background: #edf5ff;
+      color: #175cd3;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge.ok {
+      background: var(--ok-bg);
+      color: var(--ok);
+    }
+
+    .badge.warn {
+      background: var(--warn-bg);
+      color: var(--warn);
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .meta {
+      display: grid;
+      gap: 2px;
+      padding: 8px;
+      border-radius: 6px;
+      background: #f8fafc;
+    }
+
+    .meta span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .actions {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: 1fr;
+    }
+
+    .note {
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--warn-bg);
+      color: var(--warn);
+      font-weight: 700;
+    }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 390px) {
+      .meta-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (min-width: 760px) {
+      .app {
+        width: min(1180px, calc(100% - 32px));
+        padding: 28px 0 40px;
+      }
+
+      h1 {
+        font-size: clamp(34px, 4vw, 42px);
+      }
+
+      .subtitle {
+        font-size: 16px;
+      }
+
+      .panel-inner {
+        padding: 18px;
+      }
+
+      .meta-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .actions {
+        grid-template-columns: auto auto 1fr;
+      }
+
+      button {
+        width: auto;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html" aria-current="page">FIT import</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+  <main class="app">
+    <header>
+      <div>
+        <h1>FIT import</h1>
+        <p class="subtitle">Nahraj FIT subor alebo viac suborov. Stranka ich automaticky sparuje s treningom alebo sutazou v kalendari podla datumu a najblizsieho casu.</p>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="panel-inner">
+        <h2 class="panel-title">Importovat aktivity</h2>
+        <label>
+          FIT subory
+          <input id="fitInput" type="file" accept=".fit" multiple>
+        </label>
+        <label>
+          Tolerancia parovania
+          <select id="toleranceInput">
+            <option value="180">3 hodiny</option>
+            <option value="360">6 hodin</option>
+            <option value="720">12 hodin</option>
+            <option value="1440">Cely den</option>
+          </select>
+        </label>
+        <div class="note">Najpresnejsie parovanie bude, ked ma plan v kalendari vyplneny datum aj cas startu.</div>
+        <div class="list" id="resultList"></div>
+      </div>
+    </section>
+  </main>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script>
+    const TRAINING_KEY = 'flegma_tabulky_trainings_v1';
+    const FIT_EPOCH_OFFSET = 631065600;
+    const state = {
+      trainings: loadTrainings(),
+      results: []
+    };
+
+    const fitInput = document.getElementById('fitInput');
+    const toleranceInput = document.getElementById('toleranceInput');
+    const resultList = document.getElementById('resultList');
+
+    fitInput.addEventListener('change', importFiles);
+    toleranceInput.addEventListener('change', () => {
+      state.results = state.results.map((result) => ({
+        ...result,
+        match: findBestMatch(result.analysis)
+      }));
+      render();
+    });
+
+    render();
+
+    async function importFiles() {
+      const files = [...fitInput.files];
+      const imported = [];
+      for (const file of files) {
+        try {
+          const buffer = await file.arrayBuffer();
+          const analysis = parseFit(buffer);
+          imported.push({
+            id: crypto.randomUUID(),
+            fileName: file.name,
+            analysis,
+            match: findBestMatch(analysis),
+            error: ''
+          });
+        } catch (error) {
+          imported.push({
+            id: crypto.randomUUID(),
+            fileName: file.name,
+            analysis: null,
+            match: null,
+            error: error.message || 'Nepodarilo sa nacitat FIT.'
+          });
+        }
+      }
+      state.results = [...imported, ...state.results];
+      render();
+    }
+
+    function pairResult(resultId) {
+      const result = state.results.find((item) => item.id === resultId);
+      if (!result || !result.match) return;
+      const training = state.trainings.find((item) => item.id === result.match.training.id);
+      if (!training) return;
+      training.actual = {
+        ...result.analysis,
+        importedAt: new Date().toISOString(),
+        sourceFile: result.fileName,
+        matchedBy: 'auto-fit-import',
+        matchMinutes: result.match.diffMinutes
+      };
+      saveTrainings();
+      result.paired = true;
+      render();
+    }
+
+    function pairAll() {
+      state.results
+        .filter((result) => result.match && !result.paired)
+        .forEach((result) => pairResult(result.id));
+    }
+
+    function ignoreResult(resultId) {
+      state.results = state.results.filter((item) => item.id !== resultId);
+      render();
+    }
+
+    function findBestMatch(analysis) {
+      if (!analysis || !analysis.startDate) return null;
+      const tolerance = Number(toleranceInput.value);
+      const activityTime = new Date(analysis.startDate);
+      const sameDayTrainings = state.trainings.filter((training) => training.date === analysis.localDate);
+      const matches = sameDayTrainings
+        .map((training) => {
+          const plannedTime = new Date(`${training.date}T${training.startTime || '09:00'}:00`);
+          const diffMinutes = Math.abs((activityTime - plannedTime) / 60000);
+          return { training, diffMinutes };
+        })
+        .filter((match) => match.diffMinutes <= tolerance)
+        .sort((a, b) => a.diffMinutes - b.diffMinutes);
+      return matches[0] || null;
+    }
+
+    function render() {
+      if (!state.results.length) {
+        resultList.innerHTML = '<div class="note">Zatial nie je importovany ziadny FIT subor.</div>';
+        return;
+      }
+
+      const canPairAll = state.results.some((result) => result.match && !result.paired);
+      resultList.innerHTML = `
+        ${canPairAll ? '<button type="button" onclick="pairAll()">Sparovat vsetko najdene</button>' : ''}
+        ${state.results.map(renderResult).join('')}
+      `;
+    }
+
+    function renderResult(result) {
+      if (result.error) {
+        return `
+          <article class="result-card">
+            <div class="result-head">
+              <h3 class="result-title">${escapeHtml(result.fileName)}</h3>
+              <span class="badge warn">chyba</span>
+            </div>
+            <div class="note">${escapeHtml(result.error)}</div>
+            <button type="button" class="danger" onclick="ignoreResult('${result.id}')">Odstranit</button>
+          </article>
+        `;
+      }
+
+      const match = result.match;
+      const badgeClass = result.paired ? 'ok' : (match ? '' : 'warn');
+      const badgeText = result.paired ? 'sparovane' : (match ? 'najdene' : 'bez zhody');
+      const matchText = match
+        ? `${escapeHtml(match.training.title)} (${escapeHtml(match.training.date)} ${escapeHtml(match.training.startTime || '')}, rozdiel ${formatNumber(match.diffMinutes)} min)`
+        : 'Nenasiel sa trening/sutaz v tolerancii.';
+
+      return `
+        <article class="result-card">
+          <div class="result-head">
+            <div>
+              <h3 class="result-title">${escapeHtml(result.fileName)}</h3>
+              <div class="muted">${formatDateTime(result.analysis.startDate)} - ${matchText}</div>
+            </div>
+            <span class="badge ${badgeClass}">${badgeText}</span>
+          </div>
+          <div class="meta-grid">
+            ${meta('Cas', `${formatNumber(result.analysis.durationMinutes)} min`)}
+            ${meta('Vzdialenost', `${formatNumber(result.analysis.distanceKm)} km`)}
+            ${meta('Avg tep', result.analysis.avgHr ? formatNumber(result.analysis.avgHr) : '-')}
+            ${meta('Max tep', result.analysis.maxHr ? formatNumber(result.analysis.maxHr) : '-')}
+            ${meta('Avg vykon', result.analysis.avgPower ? `${formatNumber(result.analysis.avgPower)} W` : '-')}
+            ${meta('Energia', `${formatNumber(result.analysis.estimatedKcal)} kcal`)}
+          </div>
+          <div class="actions">
+            ${match && !result.paired ? `<button type="button" onclick="pairResult('${result.id}')">Sparovat</button>` : ''}
+            ${match ? `<a class="card-link" href="training.html?id=${encodeURIComponent(match.training.id)}">Otvorit detail</a>` : ''}
+            <button type="button" class="danger" onclick="ignoreResult('${result.id}')">Odstranit</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function parseFit(buffer) {
+      const view = new DataView(buffer);
+      const headerSize = view.getUint8(0);
+      const dataSize = view.getUint32(4, true);
+      const end = Math.min(headerSize + dataSize, buffer.byteLength);
+      const definitions = {};
+      const records = [];
+      let offset = headerSize;
+
+      while (offset < end) {
+        const header = view.getUint8(offset);
+        offset += 1;
+        const compressed = Boolean(header & 0x80);
+        const isDefinition = Boolean(header & 0x40);
+        const localType = compressed ? ((header >> 5) & 0x03) : (header & 0x0f);
+
+        if (isDefinition) {
+          offset += 1;
+          const architecture = view.getUint8(offset);
+          offset += 1;
+          const little = architecture === 0;
+          const globalMessage = view.getUint16(offset, little);
+          offset += 2;
+          const fieldCount = view.getUint8(offset);
+          offset += 1;
+          const fields = [];
+          for (let i = 0; i < fieldCount; i += 1) {
+            fields.push({
+              num: view.getUint8(offset),
+              size: view.getUint8(offset + 1),
+              type: view.getUint8(offset + 2),
+              little
+            });
+            offset += 3;
+          }
+          definitions[localType] = { globalMessage, fields };
+        } else {
+          const definition = definitions[localType];
+          if (!definition) break;
+          const record = {};
+          for (const field of definition.fields) {
+            const value = readFitValue(view, offset, field);
+            if (definition.globalMessage === 20) assignRecordField(record, field.num, value);
+            offset += field.size;
+          }
+          if (definition.globalMessage === 20) records.push(record);
+        }
+      }
+
+      return summarizeFit(records);
+    }
+
+    function readFitValue(view, offset, field) {
+      if (field.size === 1) return view.getUint8(offset);
+      if (field.size === 2) return view.getUint16(offset, field.little);
+      if (field.size === 4) return view.getUint32(offset, field.little);
+      return null;
+    }
+
+    function assignRecordField(record, num, value) {
+      if (value === null) return;
+      if (num === 253 && value > 0) record.timestamp = value;
+      if (num === 3 && value < 255) record.hr = value;
+      if (num === 5 && value < 4294967295) record.distance = value / 100000;
+      if (num === 6 && value < 65535) record.speed = value / 1000;
+      if (num === 7 && value < 65535) record.power = value;
+    }
+
+    function summarizeFit(records) {
+      const timedRecords = records.filter((record) => record.timestamp);
+      if (!timedRecords.length) throw new Error('FIT neobsahuje casove record data.');
+      const hrValues = records.map((record) => record.hr).filter(Boolean);
+      const powerValues = records.map((record) => record.power).filter(Boolean);
+      const firstTime = timedRecords[0].timestamp;
+      const lastTime = timedRecords[timedRecords.length - 1].timestamp;
+      const lastDistance = [...records].reverse().find((record) => record.distance)?.distance || 0;
+      const durationMinutes = Math.max(0, (lastTime - firstTime) / 60);
+      const avgPower = average(powerValues);
+      const estimatedKcal = avgPower && durationMinutes
+        ? (avgPower * durationMinutes * 60) / 4184
+        : durationMinutes * 8;
+      const startDate = fitTimestampToDate(firstTime);
+      return {
+        startDate: startDate.toISOString(),
+        localDate: toLocalDate(startDate),
+        durationMinutes,
+        distanceKm: lastDistance,
+        avgHr: average(hrValues),
+        maxHr: hrValues.length ? Math.max(...hrValues) : 0,
+        avgPower,
+        estimatedKcal
+      };
+    }
+
+    function loadTrainings() {
+      try {
+        const raw = localStorage.getItem(TRAINING_KEY);
+        return raw ? JSON.parse(raw).map((training) => ({ ...training, startTime: training.startTime || '09:00' })) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveTrainings() {
+      localStorage.setItem(TRAINING_KEY, JSON.stringify(state.trainings));
+    }
+
+    function fitTimestampToDate(timestamp) {
+      return new Date((timestamp + FIT_EPOCH_OFFSET) * 1000);
+    }
+
+    function toLocalDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatDateTime(value) {
+      if (!value) return '-';
+      return new Date(value).toLocaleString('sk-SK', {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+      });
+    }
+
+    function meta(label, valueText) {
+      return `
+        <div class="meta">
+          <span>${label}</span>
+          <strong>${valueText}</strong>
+        </div>
+      `;
+    }
+
+    function average(values) {
+      return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    }
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString('sk-SK', { maximumFractionDigits: 1 });
+    }
+
+    function escapeHtml(valueText) {
+      return String(valueText)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+  </script>
+</body>
+</html>

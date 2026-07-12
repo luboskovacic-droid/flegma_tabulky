@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bio profil</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #16202a;
+      --muted: #667085;
+      --line: #d8dee6;
+      --focus: #1d6fb8;
+      --ok: #146c43;
+      --ok-bg: #eaf7ef;
+      --shadow: 0 10px 24px rgba(22, 32, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 20px));
+      margin: 0 auto;
+      padding: 14px 0 86px;
+    }
+
+    header {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .top-link {
+      color: var(--focus);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      max-width: 760px;
+      font-size: 14px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-inner {
+      padding: 14px;
+    }
+
+    .panel-title {
+      margin: 0 0 12px;
+      font-size: 19px;
+    }
+
+    form,
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 11px;
+      color: var(--text);
+      background: #fff;
+      font: 16px Arial, Helvetica, sans-serif;
+    }
+
+    textarea {
+      min-height: 88px;
+      resize: vertical;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus,
+    button:focus {
+      outline: 3px solid rgba(29, 111, 184, 0.18);
+      border-color: var(--focus);
+    }
+
+    button {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--focus);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: var(--focus);
+      color: #fff;
+      font: 700 15px Arial, Helvetica, sans-serif;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .metric-button {
+      width: 100%;
+      min-height: 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+      box-shadow: none;
+      text-align: left;
+    }
+
+    .metric-button::after {
+      content: "Info";
+      width: fit-content;
+      margin-top: 6px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: #dcebff;
+      color: #002f6c;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .metric strong {
+      font-size: 22px;
+      line-height: 1.1;
+    }
+
+    .info-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: grid;
+      place-items: end center;
+      padding: 14px;
+      background: rgba(5, 7, 10, 0.46);
+    }
+
+    .info-modal[hidden] {
+      display: none;
+    }
+
+    .info-card {
+      width: min(560px, 100%);
+      max-height: min(82vh, 720px);
+      overflow: auto;
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border: 2px solid #005fcc;
+      border-radius: 12px 12px 10px 10px;
+      background: #fff;
+      color: var(--text);
+      box-shadow: 0 18px 48px rgba(15, 23, 42, 0.28);
+    }
+
+    .info-card h3 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .info-card p {
+      margin: 0;
+      color: #334155;
+      font-weight: 700;
+    }
+
+    .info-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .info-list li {
+      padding: 9px;
+      border: 1px solid #c7d0dc;
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #111827;
+      font-weight: 700;
+    }
+
+    .recommendation {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .recommendation h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .recommendation p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .notice {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      background: var(--ok-bg);
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    .notice.is-visible {
+      display: block;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 390px) {
+      .app {
+        width: min(100% - 14px, 1180px);
+      }
+
+      .grid-2,
+      .analysis-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (min-width: 760px) {
+      .app {
+        width: min(1180px, calc(100% - 32px));
+        padding: 28px 0 40px;
+      }
+
+      h1 {
+        font-size: clamp(34px, 4vw, 42px);
+      }
+
+      .subtitle {
+        font-size: 16px;
+      }
+
+      .layout {
+        grid-template-columns: 420px 1fr;
+        gap: 18px;
+      }
+
+      .panel-inner {
+        padding: 18px;
+      }
+
+      .form-panel {
+        position: sticky;
+        top: 16px;
+      }
+
+      .analysis-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      button {
+        width: auto;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="profile.html" aria-current="page">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+  <main class="app">
+    <header>
+      <div>
+        <h1>Bio profil</h1>
+        <p class="subtitle">Zakladne udaje pre analyzu prijmu, vahy a cyklistickej pripravy. Vsetko sa uklada iba lokalne v tomto prehliadaci.</p>
+      </div>
+    </header>
+
+    <section class="layout">
+      <aside class="panel form-panel">
+        <div class="panel-inner">
+          <h2 class="panel-title">Profil</h2>
+          <form id="profileForm" autocomplete="off">
+            <div class="grid-2">
+              <label>
+                Rok narodenia
+                <input id="birthYear" type="number" min="1920" max="2026" inputmode="numeric" required>
+              </label>
+              <label>
+                Pohlavie
+                <select id="sex" required>
+                  <option value="male">Muz</option>
+                  <option value="female">Zena</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Vyska cm
+                <input id="height" type="number" min="120" max="230" step="1" inputmode="numeric" required>
+              </label>
+              <label>
+                Vaha kg
+                <input id="weight" type="number" min="35" max="250" step="0.1" inputmode="decimal" required>
+              </label>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Cielova vaha kg
+                <input id="targetWeight" type="number" min="35" max="250" step="0.1" inputmode="decimal">
+              </label>
+              <div></div>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Ciel
+                <select id="goal">
+                  <option value="fit">Fit / udrzat</option>
+                  <option value="lose">Schudnut</option>
+                  <option value="gain">Pribrat</option>
+                  <option value="carbload">Cyklo sutaz / carbload</option>
+                </select>
+              </label>
+              <label>
+                Aktivita
+                <select id="activity">
+                  <option value="1.2">Sedava</option>
+                  <option value="1.375">Lahka 1-3x tyzdenne</option>
+                  <option value="1.55">Stredna 3-5x tyzdenne</option>
+                  <option value="1.725">Vysoka 6-7x tyzdenne</option>
+                  <option value="1.9">Velmi vysoka / dvojfazovo</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Trening h / tyzden
+                <input id="trainingHours" type="number" min="0" max="40" step="0.5" inputmode="decimal">
+              </label>
+              <div></div>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Flegmatik
+                <input id="temperFlegma" type="number" min="0" max="100" step="1" inputmode="numeric">
+              </label>
+              <label>
+                Melancholik
+                <input id="temperMelan" type="number" min="0" max="100" step="1" inputmode="numeric">
+              </label>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Cholerik
+                <input id="temperCholerik" type="number" min="0" max="100" step="1" inputmode="numeric">
+              </label>
+              <label>
+                Sangvinik
+                <input id="temperSangvinik" type="number" min="0" max="100" step="1" inputmode="numeric">
+              </label>
+            </div>
+
+            <button type="submit">Ulozit profil</button>
+          </form>
+          <div class="notice" id="notice" role="status"></div>
+          <p class="muted">Vypocty su orientacne. Na presne nastavovanie vahy a vykonu ich ber ako start, nie lekarsku diagnostiku.</p>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-inner stack">
+          <h2 class="panel-title">Analyza</h2>
+          <div class="analysis-grid" id="analysisGrid"></div>
+          <div class="recommendation" id="recommendation"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+  </div>
+
+  <div class="info-modal" id="infoModal" hidden>
+    <section class="info-card" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+      <h3 id="infoTitle"></h3>
+      <p id="infoBody"></p>
+      <ul class="info-list" id="infoList"></ul>
+      <button type="button" id="closeInfo">Zavriet</button>
+    </section>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script>
+    const STORAGE_KEY = 'flegma_tabulky_profile_v1';
+    const fields = ['birthYear', 'sex', 'height', 'weight', 'targetWeight', 'goal', 'activity', 'trainingHours', 'temperFlegma', 'temperMelan', 'temperCholerik', 'temperSangvinik'];
+
+    const profileForm = document.getElementById('profileForm');
+    const analysisGrid = document.getElementById('analysisGrid');
+    const recommendation = document.getElementById('recommendation');
+    const notice = document.getElementById('notice');
+    const infoModal = document.getElementById('infoModal');
+    const infoTitle = document.getElementById('infoTitle');
+    const infoBody = document.getElementById('infoBody');
+    const infoList = document.getElementById('infoList');
+    const closeInfo = document.getElementById('closeInfo');
+    let latestAnalysis = null;
+
+    loadProfile();
+    renderAnalysis();
+
+    profileForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      saveProfile();
+      renderAnalysis();
+      showNotice('Profil bol ulozeny.');
+    });
+
+    fields.forEach((field) => {
+      document.getElementById(field).addEventListener('input', renderAnalysis);
+    });
+
+    analysisGrid.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-info]');
+      if (!button) return;
+      openMetricInfo(button.getAttribute('data-info'));
+    });
+
+    closeInfo.addEventListener('click', closeMetricInfo);
+    infoModal.addEventListener('click', (event) => {
+      if (event.target === infoModal) closeMetricInfo();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeMetricInfo();
+    });
+
+    function readProfile() {
+      return {
+        birthYear: readNumber('birthYear'),
+        sex: value('sex'),
+        height: readNumber('height'),
+        weight: readNumber('weight'),
+        targetWeight: readNumber('targetWeight'),
+        goal: value('goal'),
+        activity: readNumber('activity'),
+        trainingHours: readNumber('trainingHours'),
+        temperament: {
+          flegma: readNumber('temperFlegma'),
+          melan: readNumber('temperMelan'),
+          cholerik: readNumber('temperCholerik'),
+          sangvinik: readNumber('temperSangvinik')
+        }
+      };
+    }
+
+    function saveProfile() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(readProfile()));
+    }
+
+    function loadProfile() {
+      const defaults = {
+        birthYear: 1990,
+        sex: 'male',
+        height: 180,
+        weight: 80,
+        targetWeight: 75,
+        goal: 'fit',
+        activity: 1.55,
+        trainingHours: 5,
+        temperFlegma: 37,
+        temperMelan: 32,
+        temperCholerik: 22,
+        temperSangvinik: 9
+      };
+
+      let profile = defaults;
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        profile = raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
+        if (profile.temperament) {
+          profile.temperFlegma = profile.temperament.flegma ?? defaults.temperFlegma;
+          profile.temperMelan = profile.temperament.melan ?? defaults.temperMelan;
+          profile.temperCholerik = profile.temperament.cholerik ?? defaults.temperCholerik;
+          profile.temperSangvinik = profile.temperament.sangvinik ?? defaults.temperSangvinik;
+        }
+      } catch {
+        profile = defaults;
+      }
+
+      fields.forEach((field) => {
+        document.getElementById(field).value = profile[field] ?? '';
+      });
+    }
+
+    function renderAnalysis() {
+      const profile = readProfile();
+      const age = Math.max(0, new Date().getFullYear() - profile.birthYear);
+      const bmi = profile.height > 0 ? profile.weight / ((profile.height / 100) ** 2) : 0;
+      const bmr = calculateBmr(profile, age);
+      const tdee = bmr * (profile.activity || 1.2);
+      const targetCalories = calculateTargetCalories(tdee, profile.goal);
+      const protein = profile.weight * proteinMultiplier(profile.goal);
+      const carbs = carbRange(profile);
+      const fat = Math.max(35, profile.weight * 0.8);
+      const weightDelta = calculateWeightDelta(profile);
+      latestAnalysis = { profile, age, bmi, bmr, tdee, targetCalories, protein, carbs, fat, weightDelta };
+
+      analysisGrid.innerHTML = `
+        ${metric('Vek', age ? `${age} r.` : '-', 'age')}
+        ${metric('BMI', bmi ? formatNumber(bmi) : '-', 'bmi')}
+        ${metric('Cielova vaha', profile.targetWeight ? `${formatNumber(profile.targetWeight)} kg` : '-', 'targetWeight')}
+        ${metric('Rozdiel vahy', weightDelta !== null ? `${formatNumber(weightDelta)} kg` : '-', 'weightDelta')}
+        ${metric('BMR', bmr ? `${formatNumber(bmr)} kcal` : '-', 'bmr')}
+        ${metric('TDEE', tdee ? `${formatNumber(tdee)} kcal` : '-', 'tdee')}
+        ${metric('Ciel kcal', targetCalories ? `${formatNumber(targetCalories)} kcal` : '-', 'targetCalories')}
+        ${metric('Protein', protein ? `${formatNumber(protein)} g` : '-', 'protein')}
+      `;
+
+      recommendation.innerHTML = `
+        <h3>${goalTitle(profile.goal)}</h3>
+        <p>${goalText(profile, targetCalories, carbs, fat)}</p>
+        <p>Carbload datum sa berie z kalendara treningov/sutazi, nie z profilu.</p>
+      `;
+    }
+
+    function calculateBmr(profile, age) {
+      if (!profile.weight || !profile.height || !age) return 0;
+      const base = (10 * profile.weight) + (6.25 * profile.height) - (5 * age);
+      return profile.sex === 'female' ? base - 161 : base + 5;
+    }
+
+    function calculateTargetCalories(tdee, goal) {
+      if (!tdee) return 0;
+      if (goal === 'lose') return tdee - 400;
+      if (goal === 'gain') return tdee + 300;
+      return tdee;
+    }
+
+    function proteinMultiplier(goal) {
+      if (goal === 'lose') return 2;
+      if (goal === 'gain') return 1.8;
+      return 1.6;
+    }
+
+    function carbRange(profile) {
+      const weight = profile.weight || 0;
+      if (profile.goal === 'carbload') return { min: weight * 8, max: weight * 10 };
+      if ((profile.trainingHours || 0) >= 8) return { min: weight * 5, max: weight * 7 };
+      if (profile.goal === 'lose') return { min: weight * 2, max: weight * 3 };
+      return { min: weight * 3, max: weight * 5 };
+    }
+
+    function goalTitle(goal) {
+      if (goal === 'lose') return 'Rezim: schudnut';
+      if (goal === 'gain') return 'Rezim: pribrat';
+      if (goal === 'carbload') return 'Rezim: cyklo sutaz / carbload';
+      return 'Rezim: fit / udrzat';
+    }
+
+    function calculateWeightDelta(profile) {
+      if (!profile.weight || !profile.targetWeight) return null;
+      return profile.weight - profile.targetWeight;
+    }
+
+    function goalText(profile, calories, carbs, fat) {
+      const goal = profile.goal;
+      const kcalText = calories ? `Startuj okolo ${formatNumber(calories)} kcal denne.` : 'Dopln vysku, vahu a rok narodenia pre kcal ciel.';
+      const carbText = carbs.min ? `Sacharidy orientacne ${formatNumber(carbs.min)}-${formatNumber(carbs.max)} g denne.` : '';
+      const fatText = fat ? `Tuky aspon okolo ${formatNumber(fat)} g denne.` : '';
+      const delta = calculateWeightDelta(profile);
+      const weightText = delta === null ? '' : delta > 0 ? `Do ciela ostava schudnut cca ${formatNumber(delta)} kg.` : delta < 0 ? `Do ciela ostava pribrat cca ${formatNumber(Math.abs(delta))} kg.` : 'Si na cielovej vahe.';
+      if (goal === 'carbload') return `${kcalText} Pri carbloade drz sacharidy vysoko, vlakninu a tazke tuky skor nizsie. ${carbText}`;
+      return `${kcalText} ${weightText} ${carbText} ${fatText}`;
+    }
+
+    function metric(label, value, infoKey) {
+      return `
+        <button type="button" class="metric metric-button" data-info="${infoKey}">
+          <span>${label}</span>
+          <strong>${value}</strong>
+        </button>
+      `;
+    }
+
+    function openMetricInfo(key) {
+      const detail = metricInfo(key);
+      if (!detail) return;
+      infoTitle.textContent = detail.title;
+      infoBody.textContent = detail.body;
+      infoList.innerHTML = detail.items.map((item) => `<li>${item}</li>`).join('');
+      infoModal.hidden = false;
+      closeInfo.focus();
+    }
+
+    function closeMetricInfo() {
+      infoModal.hidden = true;
+    }
+
+    function metricInfo(key) {
+      const data = latestAnalysis || {};
+      const profile = data.profile || readProfile();
+      const bmiBand = bmiCategory(data.bmi);
+      const proteinPerKg = proteinMultiplier(profile.goal);
+      const activityLabel = activityText(profile.activity);
+      const goalKcalText = profile.goal === 'lose' ? 'TDEE - 400 kcal pre chudnutie.' : profile.goal === 'gain' ? 'TDEE + 300 kcal pre priberanie.' : 'Pri udrzani je ciel blizko TDEE.';
+      const info = {
+        age: {
+          title: 'Vek',
+          body: 'Vek vstupuje do BMR. Cim vyssi vek, tym nizsi orientacny bazalny vydaj pri rovnakej vahe a vyske.',
+          items: [`Aktualne: ${data.age ? `${data.age} rokov` : 'nezname'}`, 'Pocita sa z roku narodenia v profile.']
+        },
+        bmi: {
+          title: 'BMI pasmo',
+          body: 'BMI je rychly pomer vahy k vyske. Je dobry ako orientacia, ale nevidi svaly, tuk ani sportovu stavbu tela.',
+          items: [
+            `Aktualne BMI: ${data.bmi ? formatNumber(data.bmi) : '-'}`,
+            `Pasmo: ${bmiBand.label}`,
+            'Pod 18,5: podvaha',
+            '18,5 az 24,9: normalna hmotnost',
+            '25,0 az 29,9: nadvaha',
+            '30,0 a viac: obezita'
+          ]
+        },
+        targetWeight: {
+          title: 'Cielova vaha',
+          body: 'Cielova vaha je tvoj smer pre kaloricky rezim. Aplikacia ju pouziva na zobrazenie rozdielu a odporucanie tempa.',
+          items: [`Aktualne nastavene: ${profile.targetWeight ? `${formatNumber(profile.targetWeight)} kg` : 'nie je nastavene'}`, 'Rozumne tempo chudnutia je casto okolo 0,3 az 0,7 kg za tyzden.']
+        },
+        weightDelta: {
+          title: 'Rozdiel vahy',
+          body: 'Rozdiel ukazuje, kolko kg je medzi aktualnou a cielovou vahou.',
+          items: [`Aktualne: ${data.weightDelta !== null ? `${formatNumber(data.weightDelta)} kg` : '-'}`, 'Kladne cislo znamena, ze ciel je nizsie ako aktualna vaha.', 'Zaporne cislo znamena, ze ciel je vyssie ako aktualna vaha.']
+        },
+        bmr: {
+          title: 'BMR',
+          body: 'BMR je bazalny metabolizmus: odhad kcal, ktore telo minie za den v uplnom klude.',
+          items: [
+            `Aktualne: ${data.bmr ? `${formatNumber(data.bmr)} kcal` : '-'}`,
+            'Pocita sa zo vzorca Mifflin-St Jeor.',
+            'Vstupy: vaha, vyska, vek a pohlavie.',
+            'Nie je to denny limit jedla. Je to spodny zaklad pred aktivitou.'
+          ]
+        },
+        tdee: {
+          title: 'TDEE',
+          body: 'TDEE je odhad celkoveho denneho vydaja. Je to BMR nasobene aktivitou.',
+          items: [
+            `Aktualne: ${data.tdee ? `${formatNumber(data.tdee)} kcal` : '-'}`,
+            `Aktivita: ${activityLabel}`,
+            'Ak vaha dlhodobo stoji, realne TDEE je pravdepodobne blizko prijmu.',
+            'Treningy a kroky mozu realny vydaj posuvat hore alebo dole.'
+          ]
+        },
+        targetCalories: {
+          title: 'Ciel kcal',
+          body: 'Ciel kcal je prakticky start pre denny prijem podla zvoleneho ciela.',
+          items: [
+            `Aktualne: ${data.targetCalories ? `${formatNumber(data.targetCalories)} kcal` : '-'}`,
+            goalKcalText,
+            'Po 2 az 3 tyzdnoch je lepsie upravit ciel podla realnej zmeny vahy a hladu.'
+          ]
+        },
+        protein: {
+          title: 'Preco tolko proteinu',
+          body: 'Protein chrani svaly pri chudnuti, zlepsuje sytost a pomaha regeneracii po treningu.',
+          items: [
+            `Aktualne: ${data.protein ? `${formatNumber(data.protein)} g denne` : '-'}`,
+            `Vzorec v appke: ${formatNumber(proteinPerKg)} g na kg aktualnej vahy.`,
+            'Pri chudnuti appka dava viac proteinu, aby si menej hladoval a menej stracal svaly.',
+            'Pri priberani je ciel stale vysoky, ale deficit ochrany svalov nie je taky kriticky.'
+          ]
+        }
+      };
+      return info[key];
+    }
+
+    function bmiCategory(bmi) {
+      if (!bmi) return { label: '-' };
+      if (bmi < 18.5) return { label: 'Podvaha' };
+      if (bmi < 25) return { label: 'Normalna hmotnost' };
+      if (bmi < 30) return { label: 'Nadvaha' };
+      if (bmi < 35) return { label: 'Obezita I. stupna' };
+      if (bmi < 40) return { label: 'Obezita II. stupna' };
+      return { label: 'Obezita III. stupna' };
+    }
+
+    function activityText(activity) {
+      const valueNumber = Number(activity);
+      if (valueNumber <= 1.2) return 'sedava, koeficient 1,2';
+      if (valueNumber <= 1.375) return 'lahka 1-3x tyzdenne, koeficient 1,375';
+      if (valueNumber <= 1.55) return 'stredna 3-5x tyzdenne, koeficient 1,55';
+      if (valueNumber <= 1.725) return 'vysoka 6-7x tyzdenne, koeficient 1,725';
+      return 'velmi vysoka / dvojfazovo, koeficient 1,9';
+    }
+
+    function value(id) {
+      return document.getElementById(id).value.trim();
+    }
+
+    function readNumber(id) {
+      const number = Number.parseFloat(value(id).replace(',', '.'));
+      return Number.isFinite(number) ? number : 0;
+    }
+
+    function formatNumber(value) {
+      return Number(value).toLocaleString('sk-SK', {
+        maximumFractionDigits: 1
+      });
+    }
+
+    function showNotice(message) {
+      notice.textContent = message;
+      notice.classList.add('is-visible');
+      window.clearTimeout(showNotice.timeout);
+      showNotice.timeout = window.setTimeout(() => {
+        notice.classList.remove('is-visible');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>

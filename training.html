@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detail treningu</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #16202a;
+      --muted: #667085;
+      --line: #d8dee6;
+      --focus: #1d6fb8;
+      --ok: #146c43;
+      --ok-bg: #eaf7ef;
+      --warn-bg: #fff8e6;
+      --warn: #8a5a00;
+      --shadow: 0 10px 24px rgba(22, 32, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 20px));
+      margin: 0 auto;
+      padding: 14px 0 86px;
+    }
+
+    header {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle,
+    .muted {
+      color: var(--muted);
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      font-size: 14px;
+    }
+
+    .top-link {
+      color: var(--focus);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-inner {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 19px;
+    }
+
+    .metric-grid,
+    .zone-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .metric,
+    .zone {
+      display: grid;
+      gap: 3px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .metric span,
+    .zone span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .metric strong,
+    .zone strong {
+      font-size: 20px;
+      line-height: 1.1;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 11px;
+      color: var(--text);
+      background: #fff;
+      font: 16px Arial, Helvetica, sans-serif;
+    }
+
+    input:focus,
+    button:focus {
+      outline: 3px solid rgba(29, 111, 184, 0.18);
+      border-color: var(--focus);
+    }
+
+    button {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--focus);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: var(--focus);
+      color: #fff;
+      font: 700 15px Arial, Helvetica, sans-serif;
+      cursor: pointer;
+    }
+
+    .note {
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--warn-bg);
+      color: var(--warn);
+      font-weight: 700;
+    }
+
+    .ok {
+      background: var(--ok-bg);
+      color: var(--ok);
+    }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 390px) {
+      .metric-grid,
+      .zone-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (min-width: 760px) {
+      .app {
+        width: min(1180px, calc(100% - 32px));
+        padding: 28px 0 40px;
+      }
+
+      h1 {
+        font-size: clamp(34px, 4vw, 42px);
+      }
+
+      .subtitle {
+        font-size: 16px;
+      }
+
+      .layout {
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+
+      .panel-inner {
+        padding: 18px;
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .zone-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+
+      button {
+        width: auto;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html" aria-current="page">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+  <main class="app">
+    <header>
+      <div>
+        <h1 id="title">Detail treningu</h1>
+        <p class="subtitle" id="subtitle">Plan, tepove zony, GPX/FIT analyza a carbload vypocet.</p>
+      </div>
+    </header>
+
+    <section class="layout">
+      <section class="panel">
+        <div class="panel-inner">
+          <h2 class="panel-title">Plan a fueling</h2>
+          <div class="metric-grid" id="planMetrics"></div>
+          <div class="note" id="fuelingNote"></div>
+          <h2 class="panel-title">Tepove zony</h2>
+          <div class="zone-grid" id="zones"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-inner">
+          <h2 class="panel-title">Import pred treningom</h2>
+          <label>
+            GPX trasa
+            <input id="gpxInput" type="file" accept=".gpx,application/gpx+xml,text/xml">
+          </label>
+          <div class="metric-grid" id="gpxMetrics"></div>
+          <div class="note" id="gpxNote">GPX pouzijem na vzdialenost, prevysenie a odhad narocnosti carbloadu.</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-inner">
+          <h2 class="panel-title">Po treningu</h2>
+          <label>
+            FIT subor
+            <input id="fitInput" type="file" accept=".fit">
+          </label>
+          <div class="metric-grid" id="fitMetrics"></div>
+          <div class="note" id="fitNote">FIT import cita bezne record polia: tep, vzdialenost, rychlost, vykon a cas. Ak zariadenie ulozi iny profil, zobrazia sa aspon dostupne hodnoty.</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-inner">
+          <h2 class="panel-title">AI doplnenie</h2>
+          <div class="metric-grid" id="recoveryMetrics"></div>
+          <div class="note ok" id="recoveryNote"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script>
+    const TRAINING_KEY = 'flegma_tabulky_trainings_v1';
+    const PROFILE_KEY = 'flegma_tabulky_profile_v1';
+    const id = new URLSearchParams(location.search).get('id');
+    const trainings = loadTrainings();
+    const training = trainings.find((item) => item.id === id) || trainings[0];
+    const profile = loadProfile();
+    let gpxAnalysis = null;
+    let fitAnalysis = training?.actual || null;
+
+    const title = document.getElementById('title');
+    const subtitle = document.getElementById('subtitle');
+    const planMetrics = document.getElementById('planMetrics');
+    const fuelingNote = document.getElementById('fuelingNote');
+    const zones = document.getElementById('zones');
+    const gpxInput = document.getElementById('gpxInput');
+    const gpxMetrics = document.getElementById('gpxMetrics');
+    const gpxNote = document.getElementById('gpxNote');
+    const fitInput = document.getElementById('fitInput');
+    const fitMetrics = document.getElementById('fitMetrics');
+    const fitNote = document.getElementById('fitNote');
+    const recoveryMetrics = document.getElementById('recoveryMetrics');
+    const recoveryNote = document.getElementById('recoveryNote');
+
+    if (!training) {
+      title.textContent = 'Nemas trening';
+      subtitle.textContent = 'Najprv pridaj trening v kalendari.';
+    }
+
+    gpxInput.addEventListener('change', importGpx);
+    fitInput.addEventListener('change', importFit);
+    render();
+
+    function render() {
+      if (!training) return;
+      const weight = profile.weight || 80;
+      const plannedHours = training.plannedMinutes / 60;
+      const plannedCarbs = training.carbsPerHour * plannedHours;
+      const intensityRate = carbsPerHourByIntensity(training.intensity);
+      const estimatedNeed = Math.max(plannedCarbs, intensityRate * plannedHours);
+      const carbload = calculateCarbloadPlan(weight, training);
+      const zonesData = calculateZones(profile);
+      const actual = fitAnalysis;
+      const recovery = calculateRecovery(weight, training, estimatedNeed, gpxAnalysis, actual);
+
+      title.textContent = training.title;
+      subtitle.textContent = `${training.date} - ${typeLabel(training.type)} - ${formatNumber(training.plannedMinutes)} min`;
+      planMetrics.innerHTML = `
+        ${metric('Plan cas', `${formatNumber(training.plannedMinutes)} min`)}
+        ${metric('Sacharidy pocas', `${formatNumber(plannedCarbs)} g`)}
+        ${metric('Odhad potreby', `${formatNumber(estimatedNeed)} g`)}
+        ${metric('Carbload total', `${formatNumber(carbload.total)} g`)}
+        ${metric('3. den', `${formatNumber(carbload.day3)} g`)}
+        ${metric('2. den', `${formatNumber(carbload.day2)} g`)}
+        ${metric('Den vykonu', `${formatNumber(carbload.day1)} g`)}
+        ${metric('Tuky limit', `${formatNumber(weight * 0.7)} g`)}
+        ${metric('Vlaknina limit', '25 g')}
+      `;
+      fuelingNote.textContent = training.type === 'race' || profile.goal === 'carbload'
+        ? 'Carbload: 25% treti den, 60% druhy den, 15% v den vykonu. Vysoke sacharidy, nizsie tuky a vlaknina.'
+        : 'Bezny trening: sacharidy pocas vykonu nastav podla dlzky a intenzity, pri lahkom kratkom treningu moze stacit voda.';
+      zones.innerHTML = zonesData.map((zone) => `
+        <div class="zone">
+          <span>${zone.label}</span>
+          <strong>${zone.min}-${zone.max}</strong>
+        </div>
+      `).join('');
+      renderGpx();
+      renderFit();
+      recoveryMetrics.innerHTML = `
+        ${metric('Min. doplnit', `${formatNumber(recovery.carbsToRefill)} g S`)}
+        ${metric('Kcal doplnit', `${formatNumber(recovery.kcalToRefill)} kcal`)}
+        ${metric('Tekutiny', `${formatNumber(recovery.fluids)} l`)}
+      `;
+      recoveryNote.textContent = recovery.message;
+    }
+
+    async function importGpx() {
+      const file = gpxInput.files[0];
+      if (!file) return;
+      const text = await file.text();
+      gpxAnalysis = parseGpx(text);
+      render();
+    }
+
+    async function importFit() {
+      const file = fitInput.files[0];
+      if (!file || !training) return;
+      const buffer = await file.arrayBuffer();
+      fitAnalysis = parseFit(buffer);
+      training.actual = fitAnalysis;
+      saveTrainings();
+      render();
+    }
+
+    function renderGpx() {
+      if (!gpxAnalysis) {
+        gpxMetrics.innerHTML = '';
+        return;
+      }
+      gpxMetrics.innerHTML = `
+        ${metric('Vzdialenost', `${formatNumber(gpxAnalysis.distanceKm)} km`)}
+        ${metric('Prevysenie+', `${formatNumber(gpxAnalysis.elevationGain)} m`)}
+        ${metric('Body', formatNumber(gpxAnalysis.points))}
+      `;
+      gpxNote.textContent = gpxAnalysis.elevationGain > 800
+        ? 'Trasa ma vysoke prevysenie: zvys sacharidy pocas vykonu a nechod do preteku s vysokou vlakninou.'
+        : 'Trasa je nacitana. Carbload bude presnejsi podla vzdialenosti a prevysenia.';
+    }
+
+    function renderFit() {
+      if (!fitAnalysis) {
+        fitMetrics.innerHTML = '';
+        return;
+      }
+      fitMetrics.innerHTML = `
+        ${metric('Cas', `${formatNumber(fitAnalysis.durationMinutes)} min`)}
+        ${metric('Vzdialenost', `${formatNumber(fitAnalysis.distanceKm)} km`)}
+        ${metric('Avg tep', fitAnalysis.avgHr ? `${formatNumber(fitAnalysis.avgHr)}` : '-')}
+        ${metric('Max tep', fitAnalysis.maxHr ? `${formatNumber(fitAnalysis.maxHr)}` : '-')}
+        ${metric('Avg vykon', fitAnalysis.avgPower ? `${formatNumber(fitAnalysis.avgPower)} W` : '-')}
+        ${metric('Energia', `${formatNumber(fitAnalysis.estimatedKcal)} kcal`)}
+      `;
+      fitNote.textContent = 'FIT je nacitany a ulozeny k treningu. Doplnenie sacharidov sa prepocitalo podla realneho casu/intenzity.';
+    }
+
+    function parseGpx(text) {
+      const doc = new DOMParser().parseFromString(text, 'application/xml');
+      const points = [...doc.querySelectorAll('trkpt')].map((point) => ({
+        lat: Number(point.getAttribute('lat')),
+        lon: Number(point.getAttribute('lon')),
+        ele: Number(point.querySelector('ele')?.textContent || 0)
+      })).filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lon));
+      let distance = 0;
+      let elevationGain = 0;
+      for (let i = 1; i < points.length; i += 1) {
+        distance += haversine(points[i - 1], points[i]);
+        const diff = points[i].ele - points[i - 1].ele;
+        if (diff > 0) elevationGain += diff;
+      }
+      return { points: points.length, distanceKm: distance, elevationGain };
+    }
+
+    function parseFit(buffer) {
+      const view = new DataView(buffer);
+      const headerSize = view.getUint8(0);
+      const dataSize = view.getUint32(4, true);
+      const end = Math.min(headerSize + dataSize, buffer.byteLength);
+      const definitions = {};
+      const records = [];
+      let offset = headerSize;
+
+      while (offset < end) {
+        const header = view.getUint8(offset);
+        offset += 1;
+        const compressed = Boolean(header & 0x80);
+        const isDefinition = Boolean(header & 0x40);
+        const localType = compressed ? ((header >> 5) & 0x03) : (header & 0x0f);
+
+        if (isDefinition) {
+          offset += 1;
+          const architecture = view.getUint8(offset);
+          offset += 1;
+          const little = architecture === 0;
+          const globalMessage = view.getUint16(offset, little);
+          offset += 2;
+          const fieldCount = view.getUint8(offset);
+          offset += 1;
+          const fields = [];
+          for (let i = 0; i < fieldCount; i += 1) {
+            fields.push({
+              num: view.getUint8(offset),
+              size: view.getUint8(offset + 1),
+              type: view.getUint8(offset + 2),
+              little
+            });
+            offset += 3;
+          }
+          definitions[localType] = { globalMessage, fields };
+        } else {
+          const definition = definitions[localType];
+          if (!definition) break;
+          const record = {};
+          for (const field of definition.fields) {
+            const value = readFitValue(view, offset, field);
+            if (definition.globalMessage === 20) assignRecordField(record, field.num, value);
+            offset += field.size;
+          }
+          if (definition.globalMessage === 20) records.push(record);
+        }
+      }
+
+      return summarizeFit(records);
+    }
+
+    function readFitValue(view, offset, field) {
+      if (field.size === 1) return view.getUint8(offset);
+      if (field.size === 2) return view.getUint16(offset, field.little);
+      if (field.size === 4) return view.getUint32(offset, field.little);
+      return null;
+    }
+
+    function assignRecordField(record, num, value) {
+      if (value === null) return;
+      if (num === 253) record.timestamp = value;
+      if (num === 3 && value < 255) record.hr = value;
+      if (num === 5 && value < 4294967295) record.distance = value / 100000;
+      if (num === 6 && value < 65535) record.speed = value / 1000;
+      if (num === 7 && value < 65535) record.power = value;
+    }
+
+    function summarizeFit(records) {
+      const hrValues = records.map((record) => record.hr).filter(Boolean);
+      const powerValues = records.map((record) => record.power).filter(Boolean);
+      const firstTime = records.find((record) => record.timestamp)?.timestamp || 0;
+      const lastTime = [...records].reverse().find((record) => record.timestamp)?.timestamp || firstTime;
+      const lastDistance = [...records].reverse().find((record) => record.distance)?.distance || 0;
+      const durationMinutes = Math.max(0, (lastTime - firstTime) / 60);
+      const avgPower = average(powerValues);
+      const estimatedKcal = avgPower && durationMinutes
+        ? (avgPower * durationMinutes * 60) / 4184
+        : durationMinutes * 8;
+      return {
+        durationMinutes,
+        distanceKm: lastDistance,
+        avgHr: average(hrValues),
+        maxHr: hrValues.length ? Math.max(...hrValues) : 0,
+        avgPower,
+        estimatedKcal
+      };
+    }
+
+    function calculateRecovery(weight, training, estimatedNeed, gpx, actual) {
+      const durationHours = actual?.durationMinutes ? actual.durationMinutes / 60 : training.plannedMinutes / 60;
+      const routeBonus = gpx ? Math.min(40, gpx.elevationGain / 50) : 0;
+      const actualCarbNeed = actual?.estimatedKcal ? Math.max(estimatedNeed, actual.estimatedKcal * 0.45 / 4) : estimatedNeed;
+      const carbsToRefill = Math.max(0, actualCarbNeed + routeBonus);
+      const kcalToRefill = carbsToRefill * 4;
+      const fluids = Math.max(0.5, durationHours * 0.6);
+      const message = `Dopln cca ${formatNumber(carbsToRefill)} g sacharidov. Pri carbloade drzte dalsie jedla vysoko sacharidove, tuky a vlakninu nizsie. Tekutiny aspon ${formatNumber(fluids)} l plus sol podla potenia.`;
+      return { carbsToRefill, kcalToRefill, fluids, message };
+    }
+
+    function calculateCarbloadPlan(weight, training) {
+      const total = weight * carbloadMultiplier(training);
+      return {
+        total,
+        day3: total * 0.25,
+        day2: total * 0.6,
+        day1: total * 0.15
+      };
+    }
+
+    function carbloadMultiplier(training) {
+      const base = { easy: 6, steady: 8, hard: 9, race: 10 }[training?.intensity] || 8;
+      const typeBonus = { race: 1, brick: 0.5, multi: 1, bike: 0.3, run: 0, swim: -0.5, fitko: -1 }[training?.type] || 0;
+      return Math.max(4, base + typeBonus);
+    }
+
+    function calculateZones(profile) {
+      const age = profile.birthYear ? new Date().getFullYear() - profile.birthYear : 35;
+      const maxHr = Math.round(220 - age);
+      return [
+        { label: 'Z1', min: Math.round(maxHr * 0.5), max: Math.round(maxHr * 0.6) },
+        { label: 'Z2', min: Math.round(maxHr * 0.6), max: Math.round(maxHr * 0.7) },
+        { label: 'Z3', min: Math.round(maxHr * 0.7), max: Math.round(maxHr * 0.8) },
+        { label: 'Z4', min: Math.round(maxHr * 0.8), max: Math.round(maxHr * 0.9) },
+        { label: 'Z5', min: Math.round(maxHr * 0.9), max: maxHr }
+      ];
+    }
+
+    function carbsPerHourByIntensity(intensity) {
+      return { easy: 30, steady: 60, hard: 80, race: 90 }[intensity] || 60;
+    }
+
+    function haversine(a, b) {
+      const radius = 6371;
+      const dLat = toRad(b.lat - a.lat);
+      const dLon = toRad(b.lon - a.lon);
+      const lat1 = toRad(a.lat);
+      const lat2 = toRad(b.lat);
+      const value = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+      return 2 * radius * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+    }
+
+    function toRad(value) {
+      return value * Math.PI / 180;
+    }
+
+    function metric(label, value) {
+      return `
+        <div class="metric">
+          <span>${label}</span>
+          <strong>${value}</strong>
+        </div>
+      `;
+    }
+
+    function loadTrainings() {
+      try {
+        const raw = localStorage.getItem(TRAINING_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveTrainings() {
+      localStorage.setItem(TRAINING_KEY, JSON.stringify(trainings));
+    }
+
+    function loadProfile() {
+      try {
+        const raw = localStorage.getItem(PROFILE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function typeLabel(type) {
+      return {
+        fitko: 'Fitko',
+        bike: 'Bicyklovanie',
+        run: 'Beh',
+        swim: 'Plavanie',
+        brick: 'Brick',
+        multi: 'Dua-aqua-triat',
+        race: 'Sutaz'
+      }[type] || type;
+    }
+
+    function average(values) {
+      return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    }
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString('sk-SK', { maximumFractionDigits: 1 });
+    }
+  </script>
+</body>
+</html>

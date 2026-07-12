@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flegma tabulky</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #16202a;
+      --muted: #667085;
+      --line: #d8dee6;
+      --focus: #1d6fb8;
+      --shadow: 0 10px 24px rgba(22, 32, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    main {
+      width: min(720px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 24px 0;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .nav {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .hero {
+      display: grid;
+      gap: 14px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero-top {
+      display: grid;
+      gap: 8px;
+    }
+
+    .hero-kpis {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .kpi {
+      display: grid;
+      gap: 2px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .kpi span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .kpi strong {
+      font-size: 22px;
+    }
+
+    .tile {
+      display: grid;
+      gap: 6px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .tile:focus {
+      outline: 3px solid rgba(29, 111, 184, 0.18);
+      border-color: var(--focus);
+    }
+
+    .tile strong {
+      font-size: 19px;
+    }
+
+    .tile span {
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    @media (min-width: 760px) {
+      .hero {
+        grid-template-columns: 1.4fr 1fr;
+        align-items: end;
+        padding: 24px;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+  <main>
+    <section class="settings-panel" data-setup-panel>
+      <h2>Najprv nastav sporty</h2>
+      <p>Vyber, co ma aplikacia ukazovat. Ak chce niekto len schudnut bez sportu, vypni vsetko a PWA skryje kalendar aj FIT import.</p>
+      <form data-sport-settings-form data-start-setup>
+        <div class="preset-row" aria-label="Rychle volby">
+          <button type="button" class="secondary" data-sport-preset="weightloss">Len chudnutie</button>
+          <button type="button" class="secondary" data-sport-preset="bike">Cyklistika</button>
+          <button type="button" class="secondary" data-sport-preset="triathlon">Triatlon</button>
+        </div>
+        <div class="sport-grid">
+          <label class="sport-toggle"><input type="checkbox" name="sport_fitko"> Fitko</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_bike"> Bike</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_run"> Beh</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_swim"> Plavanie</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_brick"> Brick</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_multi"> Dua-aqua-triat</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_race"> Sutaz</label>
+        </div>
+        <div class="settings-actions">
+          <button type="submit">Ulozit nastavenie PWA</button>
+          <p class="notice-text" data-settings-saved hidden>Nastavenie ulozene.</p>
+        </div>
+      </form>
+    </section>
+
+    <section class="hero">
+      <div class="hero-top">
+        <h1>Flegma tabulky</h1>
+        <p>Lokálne kalorické tabuľky, bio profil, tréningový kalendár, carbload a FIT/GPX analýza v jednom jednoduchom nástroji.</p>
+      </div>
+      <div class="hero-kpis" id="homeStats">
+        <div class="kpi"><span>Jedla</span><strong>-</strong></div>
+        <div class="kpi"><span>Treningy</span><strong>-</strong></div>
+      </div>
+    </section>
+
+    <nav class="nav" aria-label="Nastroje">
+      <a class="tile" href="graphs.html" data-module="analysis">
+        <strong>Grafy</strong>
+        <span>Index grafov pre vyjazdy, cas treningu, sportove typy, sacharidy a kcal.</span>
+      </a>
+      <a class="tile" href="profile.html">
+        <strong>Bio profil</strong>
+        <span>Rok narodenia, vyska, vaha, ciel, aktivita a cyklisticky carbload profil.</span>
+      </a>
+      <a class="tile" href="diary.html">
+        <strong>Kaloricke tabulky</strong>
+        <span>Denny zapis jedal, porcie v gramoch, sucty kcal a makier.</span>
+      </a>
+      <a class="tile" href="calendar.html" data-module="sports">
+        <strong>Kalendar treningov</strong>
+        <span>Planovanie fitka, bicykla, behu, plavania, bricku a sutazi s carbload vypoctom.</span>
+      </a>
+      <a class="tile" href="fit-import.html" data-module="sports">
+        <strong>FIT import</strong>
+        <span>Automaticke sparovanie FIT suboru s treningom alebo sutazou z kalendara.</span>
+      </a>
+      <a class="tile" href="foods.html">
+        <strong>Databaza jedal</strong>
+        <span>Pridat, upravit, vymazat a vyhladavat jedla s hodnotami na 100 g.</span>
+      </a>
+      <a class="tile" href="recipes.html">
+        <strong>Recepty</strong>
+        <span>Palacinky, domace gely, iontove napoje a vlastne jedla prepoctene na 100 g.</span>
+      </a>
+      <a class="tile" href="recommendations.html">
+        <strong>Moje odporucania</strong>
+        <span>Stabilne jedla s gramazou, ktore AI trener pouzije ako prvu volbu.</span>
+      </a>
+      <a class="tile" href="data.html" data-module="analysis">
+        <strong>Data a prenos</strong>
+        <span>Export/import lokalnych dat pri presune medzi Macom, GitHub Pages a mobilom.</span>
+      </a>
+    </nav>
+  </main>
+  </div>
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script>
+    const stats = document.getElementById('homeStats');
+    const foods = readCount('flegma_tabulky_foods_v1');
+    const trainings = readCount('flegma_tabulky_trainings_v1');
+    const diary = readCount('flegma_tabulky_diary_v1');
+    const profile = localStorage.getItem('flegma_tabulky_profile_v1') ? 'OK' : '-';
+
+    stats.innerHTML = `
+      <div class="kpi"><span>Jedla</span><strong>${foods}</strong></div>
+      <div class="kpi"><span>Treningy</span><strong>${trainings}</strong></div>
+      <div class="kpi"><span>Zapis jedal</span><strong>${diary}</strong></div>
+      <div class="kpi"><span>Profil</span><strong>${profile}</strong></div>
+    `;
+
+    function readCount(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw).length : 0;
+      } catch {
+        return 0;
+      }
+    }
+  </script>
+</body>
+</html>

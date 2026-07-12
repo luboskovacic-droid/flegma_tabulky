@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nastavenie - Flegma tabulky</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="settings.html" aria-current="page">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+
+  <main class="app">
+    <header>
+      <div>
+        <h1>Nastavenie PWA</h1>
+        <p class="subtitle">Zapni iba sporty, ktore ma tato instalacia pouzivat.</p>
+      </div>
+    </header>
+
+    <section class="settings-panel">
+      <h2>Sportove moduly</h2>
+      <p data-settings-summary>Este nie je ulozeny profil sportov.</p>
+      <form data-sport-settings-form>
+        <div class="preset-row" aria-label="Rychle volby">
+          <button type="button" class="secondary" data-sport-preset="weightloss">Len chudnutie</button>
+          <button type="button" class="secondary" data-sport-preset="bike">Cyklistika</button>
+          <button type="button" class="secondary" data-sport-preset="triathlon">Triatlon</button>
+        </div>
+
+        <div class="sport-grid">
+          <label class="sport-toggle"><input type="checkbox" name="sport_fitko"> Fitko</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_bike"> Bike</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_run"> Beh</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_swim"> Plavanie</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_brick"> Brick</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_multi"> Dua-aqua-triat</label>
+          <label class="sport-toggle"><input type="checkbox" name="sport_race"> Sutaz</label>
+        </div>
+
+        <div class="settings-actions">
+          <button type="submit">Ulozit nastavenie</button>
+          <p class="notice-text" data-settings-saved hidden>Nastavenie ulozene.</p>
+        </div>
+      </form>
+    </section>
+  </main>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+</body>
+</html>

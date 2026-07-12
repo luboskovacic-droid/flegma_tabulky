@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Recepty - Flegma tabulky</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    .recipe-layout {
+      display: grid;
+      gap: 12px;
+    }
+
+    .recipe-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .ingredient-row {
+      display: grid;
+      grid-template-columns: 1fr 96px auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .ingredient-list,
+    .recipe-list,
+    .recipe-summary {
+      display: grid;
+      gap: 10px;
+    }
+
+    .ingredient-card,
+    .recipe-card,
+    .fuel-card {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 2px solid #9aa8b8;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .recipe-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .recipe-head h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .macro-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .macro-item {
+      display: grid;
+      gap: 2px;
+      padding: 9px;
+      border: 1px solid #c7d0dc;
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .macro-item span {
+      color: #3d4b5c;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .macro-item strong {
+      color: #05070a;
+      font-size: 18px;
+    }
+
+    .pill {
+      width: fit-content;
+      padding: 4px 8px;
+      border: 2px solid #005fcc;
+      border-radius: 999px;
+      background: #dcebff;
+      color: #002f6c;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    @media (max-width: 480px) {
+      .ingredient-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (min-width: 860px) {
+      .recipe-layout {
+        grid-template-columns: 390px minmax(0, 1fr);
+        align-items: start;
+      }
+
+      .recipe-form-panel {
+        position: sticky;
+        top: 18px;
+      }
+
+      .macro-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html" aria-current="page">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+
+  <main class="app">
+    <header>
+      <div>
+        <h1>Recepty</h1>
+        <p class="subtitle">Palacinky, domace gely, iontove napoje a vlastne jedla. Vysledok sa ulozi do databazy jedal na 100 g.</p>
+      </div>
+    </header>
+
+    <section class="recipe-layout">
+      <aside class="panel recipe-form-panel">
+        <div class="panel-inner recipe-panel">
+          <h2 class="panel-title">Novy recept</h2>
+          <form id="recipeForm" autocomplete="off">
+            <label>
+              Nazov
+              <input id="recipeName" required maxlength="90" placeholder="napr. Domaci iontak citron">
+            </label>
+
+            <div class="grid-2">
+              <label>
+                Typ
+                <select id="recipeType">
+                  <option value="meal">Jedlo / recept</option>
+                  <option value="pancake">Palacinky</option>
+                  <option value="gel">Domaci gel</option>
+                  <option value="drink">Iontovy napoj</option>
+                </select>
+              </label>
+              <label>
+                Vysledna hmotnost / ml
+                <input id="finalWeight" type="number" min="1" step="1" inputmode="decimal" required value="500">
+              </label>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Porcia g/ml
+                <input id="portionSize" type="number" min="1" step="1" inputmode="decimal" value="100">
+              </label>
+              <label>
+                Sodík mg spolu
+                <input id="sodium" type="number" min="0" step="1" inputmode="numeric" value="0">
+              </label>
+            </div>
+
+            <div class="grid-2">
+              <label>
+                Kofein mg spolu
+                <input id="caffeine" type="number" min="0" step="1" inputmode="numeric" value="0">
+              </label>
+              <div></div>
+            </div>
+          </form>
+
+          <div class="ingredient-row">
+            <label>
+              Surovina
+              <input id="ingredientName" list="foodOptions" placeholder="zacni pisat..." autocomplete="off">
+              <datalist id="foodOptions"></datalist>
+            </label>
+            <label>
+              g/ml
+              <input id="ingredientGrams" type="number" min="0" step="0.1" inputmode="decimal">
+            </label>
+            <button type="button" id="addIngredient">Pridat</button>
+          </div>
+
+          <div class="ingredient-list" id="ingredientList"></div>
+          <button type="submit" form="recipeForm" class="primary">Ulozit ako jedlo</button>
+          <div class="notice" id="notice" role="status"></div>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-inner recipe-panel">
+          <h2 class="panel-title">Vypocet</h2>
+          <div class="recipe-summary" id="recipeSummary"></div>
+          <h2 class="panel-title">Ulozene recepty</h2>
+          <div class="recipe-list" id="recipeList"></div>
+          <div class="empty" id="emptyState">Zatial nemas ulozeny ziaden recept.</div>
+        </div>
+      </section>
+    </section>
+  </main>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script>
+    const FOOD_KEY = 'flegma_tabulky_foods_v1';
+    const RECIPE_KEY = 'flegma_tabulky_recipes_v1';
+    const macroFields = ['kcal', 'protein', 'carbs', 'fat', 'sugar', 'fiber'];
+
+    const state = {
+      foods: loadArray(FOOD_KEY),
+      recipes: loadArray(RECIPE_KEY),
+      ingredients: []
+    };
+
+    const recipeForm = document.getElementById('recipeForm');
+    const recipeName = document.getElementById('recipeName');
+    const recipeType = document.getElementById('recipeType');
+    const finalWeight = document.getElementById('finalWeight');
+    const portionSize = document.getElementById('portionSize');
+    const sodium = document.getElementById('sodium');
+    const caffeine = document.getElementById('caffeine');
+    const ingredientName = document.getElementById('ingredientName');
+    const ingredientGrams = document.getElementById('ingredientGrams');
+    const addIngredient = document.getElementById('addIngredient');
+    const foodOptions = document.getElementById('foodOptions');
+    const ingredientList = document.getElementById('ingredientList');
+    const recipeSummary = document.getElementById('recipeSummary');
+    const recipeList = document.getElementById('recipeList');
+    const emptyState = document.getElementById('emptyState');
+    const notice = document.getElementById('notice');
+
+    addIngredient.addEventListener('click', addIngredientToRecipe);
+    recipeForm.addEventListener('submit', saveRecipe);
+    [recipeType, finalWeight, portionSize, sodium, caffeine].forEach((input) => input.addEventListener('input', render));
+
+    render();
+
+    function addIngredientToRecipe() {
+      const food = findFood(ingredientName.value);
+      const grams = readNumber(ingredientGrams.value);
+      if (!food) {
+        showNotice('Vyber surovinu z databazy jedal.');
+        return;
+      }
+      if (grams <= 0) {
+        showNotice('Zadaj gramaz suroviny.');
+        return;
+      }
+      state.ingredients.push({
+        id: crypto.randomUUID(),
+        foodId: food.id,
+        name: food.name,
+        grams,
+        values: calculateValues(food, grams)
+      });
+      ingredientName.value = '';
+      ingredientGrams.value = '';
+      render();
+    }
+
+    function removeIngredient(id) {
+      state.ingredients = state.ingredients.filter((item) => item.id !== id);
+      render();
+    }
+
+    function saveRecipe(event) {
+      event.preventDefault();
+      if (!state.ingredients.length) {
+        showNotice('Najprv pridaj aspon jednu surovinu.');
+        return;
+      }
+
+      const calculated = calculateRecipe();
+      if (calculated.finalWeight <= 0) {
+        showNotice('Zadaj vyslednu hmotnost alebo objem.');
+        return;
+      }
+
+      const recipe = {
+        id: crypto.randomUUID(),
+        name: recipeName.value.trim(),
+        type: recipeType.value,
+        finalWeight: calculated.finalWeight,
+        portionSize: calculated.portionSize,
+        sodium: readNumber(sodium.value),
+        caffeine: readNumber(caffeine.value),
+        ingredients: state.ingredients,
+        per100: calculated.per100,
+        portion: calculated.portion,
+        createdAt: new Date().toISOString()
+      };
+
+      const food = {
+        id: `recipe-${recipe.id}`,
+        name: recipe.name,
+        ...recipe.per100,
+        recipeId: recipe.id,
+        recipeType: recipe.type,
+        portionSize: recipe.portionSize,
+        sodiumPer100: recipe.finalWeight > 0 ? (recipe.sodium / recipe.finalWeight) * 100 : 0,
+        caffeinePer100: recipe.finalWeight > 0 ? (recipe.caffeine / recipe.finalWeight) * 100 : 0
+      };
+
+      state.recipes.unshift(recipe);
+      state.foods = [food, ...state.foods.filter((item) => item.name.toLowerCase() !== food.name.toLowerCase())];
+      localStorage.setItem(RECIPE_KEY, JSON.stringify(state.recipes));
+      localStorage.setItem(FOOD_KEY, JSON.stringify(state.foods));
+
+      recipeForm.reset();
+      finalWeight.value = 500;
+      portionSize.value = 100;
+      sodium.value = 0;
+      caffeine.value = 0;
+      state.ingredients = [];
+      showNotice('Recept bol ulozeny do databazy jedal.');
+      render();
+    }
+
+    function deleteRecipe(id) {
+      const recipe = state.recipes.find((item) => item.id === id);
+      if (!recipe) return;
+      if (!confirm(`Vymazat recept "${recipe.name}"? Jedlo v databaze ostane, ak ho nevymazes v Jedlach.`)) return;
+      state.recipes = state.recipes.filter((item) => item.id !== id);
+      localStorage.setItem(RECIPE_KEY, JSON.stringify(state.recipes));
+      showNotice('Recept bol vymazany.');
+      render();
+    }
+
+    function render() {
+      foodOptions.innerHTML = state.foods
+        .map((food) => `<option value="${escapeHtml(food.name)}"></option>`)
+        .join('');
+
+      ingredientList.innerHTML = state.ingredients.length ? state.ingredients.map((item) => `
+        <article class="ingredient-card">
+          <div class="recipe-head">
+            <h3>${escapeHtml(item.name)}</h3>
+            <span class="pill">${formatNumber(item.grams)} g</span>
+          </div>
+          <div class="macro-grid">
+            ${macroItem('kcal', item.values.kcal, 'kcal')}
+            ${macroItem('B', item.values.protein, 'g')}
+            ${macroItem('S', item.values.carbs, 'g')}
+            ${macroItem('T', item.values.fat, 'g')}
+          </div>
+          <button type="button" class="danger" onclick="removeIngredient('${item.id}')">Odstranit</button>
+        </article>
+      `).join('') : '<p class="muted">Pridaj suroviny z databazy jedal.</p>';
+
+      const calculated = calculateRecipe();
+      recipeSummary.innerHTML = `
+        <article class="fuel-card">
+          <div class="recipe-head">
+            <h3>Na 100 g/ml</h3>
+            <span class="pill">${typeLabel(recipeType.value)}</span>
+          </div>
+          <div class="macro-grid">
+            ${macroItem('kcal', calculated.per100.kcal, 'kcal')}
+            ${macroItem('Bielkoviny', calculated.per100.protein, 'g')}
+            ${macroItem('Sacharidy', calculated.per100.carbs, 'g')}
+            ${macroItem('Tuky', calculated.per100.fat, 'g')}
+            ${macroItem('Cukry', calculated.per100.sugar, 'g')}
+            ${macroItem('Vlaknina', calculated.per100.fiber, 'g')}
+          </div>
+        </article>
+        <article class="fuel-card">
+          <div class="recipe-head">
+            <h3>Na porciu ${formatNumber(calculated.portionSize)} g/ml</h3>
+            <span class="pill">${formatNumber(calculated.finalWeight)} spolu</span>
+          </div>
+          <div class="macro-grid">
+            ${macroItem('kcal', calculated.portion.kcal, 'kcal')}
+            ${macroItem('Bielkoviny', calculated.portion.protein, 'g')}
+            ${macroItem('Sacharidy', calculated.portion.carbs, 'g')}
+            ${macroItem('Sodik', calculated.sodiumPortion, 'mg')}
+            ${macroItem('Kofein', calculated.caffeinePortion, 'mg')}
+            ${macroItem('Porcii', calculated.portions, 'x')}
+          </div>
+        </article>
+      `;
+
+      recipeList.innerHTML = state.recipes.map((recipe) => `
+        <article class="recipe-card">
+          <div class="recipe-head">
+            <h3>${escapeHtml(recipe.name)}</h3>
+            <span class="pill">${typeLabel(recipe.type)}</span>
+          </div>
+          <div class="macro-grid">
+            ${macroItem('kcal/100', recipe.per100.kcal, 'kcal')}
+            ${macroItem('S/100', recipe.per100.carbs, 'g')}
+            ${macroItem('B/100', recipe.per100.protein, 'g')}
+            ${macroItem('T/100', recipe.per100.fat, 'g')}
+          </div>
+          <button type="button" class="danger" onclick="deleteRecipe('${recipe.id}')">Vymazat recept</button>
+        </article>
+      `).join('');
+      emptyState.hidden = Boolean(state.recipes.length);
+    }
+
+    function calculateRecipe() {
+      const finalWeightValue = readNumber(finalWeight.value);
+      const portionValue = readNumber(portionSize.value) || 100;
+      const totals = state.ingredients.reduce((sum, item) => {
+        macroFields.forEach((field) => {
+          sum[field] += item.values[field] || 0;
+        });
+        return sum;
+      }, emptyMacros());
+      const per100 = scaleMacros(totals, finalWeightValue > 0 ? 100 / finalWeightValue : 0);
+      const portion = scaleMacros(per100, portionValue / 100);
+      const portions = finalWeightValue > 0 ? finalWeightValue / portionValue : 0;
+      return {
+        finalWeight: finalWeightValue,
+        portionSize: portionValue,
+        totals,
+        per100,
+        portion,
+        portions,
+        sodiumPortion: finalWeightValue > 0 ? (readNumber(sodium.value) / finalWeightValue) * portionValue : 0,
+        caffeinePortion: finalWeightValue > 0 ? (readNumber(caffeine.value) / finalWeightValue) * portionValue : 0
+      };
+    }
+
+    function calculateValues(food, grams) {
+      return scaleMacros(food, grams / 100);
+    }
+
+    function scaleMacros(source, ratio) {
+      const values = emptyMacros();
+      macroFields.forEach((field) => {
+        values[field] = Number(((Number(source[field]) || 0) * ratio).toFixed(2));
+      });
+      return values;
+    }
+
+    function emptyMacros() {
+      return { kcal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, fiber: 0 };
+    }
+
+    function findFood(name) {
+      const normalized = String(name).trim().toLowerCase();
+      return state.foods.find((food) => food.name.toLowerCase() === normalized);
+    }
+
+    function loadArray(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function readNumber(valueText) {
+      const number = Number.parseFloat(String(valueText).replace(',', '.'));
+      return Number.isFinite(number) ? number : 0;
+    }
+
+    function macroItem(label, value, unit) {
+      return `
+        <div class="macro-item">
+          <span>${label}</span>
+          <strong>${formatNumber(value)} ${unit}</strong>
+        </div>
+      `;
+    }
+
+    function typeLabel(type) {
+      return {
+        meal: 'Jedlo',
+        pancake: 'Palacinky',
+        gel: 'Domaci gel',
+        drink: 'Iontak'
+      }[type] || type;
+    }
+
+    function formatNumber(value) {
+      return Number(value).toLocaleString('sk-SK', { maximumFractionDigits: 1 });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function showNotice(message) {
+      notice.textContent = message;
+      notice.classList.add('is-visible');
+      window.clearTimeout(showNotice.timeout);
+      showNotice.timeout = window.setTimeout(() => {
+        notice.classList.remove('is-visible');
+      }, 2600);
+    }
+  </script>
+</body>
+</html>

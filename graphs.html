@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grafy</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #16202a;
+      --muted: #667085;
+      --line: #d8dee6;
+      --focus: #1d6fb8;
+      --shadow: 0 10px 24px rgba(22, 32, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 20px));
+      margin: 0 auto;
+      padding: 14px 0 86px;
+    }
+
+    header {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle,
+    .muted {
+      color: var(--muted);
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      font-size: 14px;
+    }
+
+    .top-link {
+      color: var(--focus);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .kpi-grid,
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .kpi,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .kpi {
+      display: grid;
+      gap: 4px;
+      padding: 14px;
+    }
+
+    .kpi span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .kpi strong {
+      font-size: 26px;
+      line-height: 1.1;
+    }
+
+    .panel {
+      overflow: hidden;
+    }
+
+    .panel-inner {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 19px;
+    }
+
+    .chart-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .chart-tools {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 0 0 auto;
+    }
+
+    .chart-tools button {
+      width: 42px;
+      min-height: 38px;
+      padding: 6px 8px;
+    }
+
+    .chart-tools .reset-zoom {
+      width: auto;
+      min-width: 64px;
+    }
+
+    .zoom-label {
+      min-width: 54px;
+      color: #05070a;
+      font-size: 13px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .chart-scroll {
+      width: 100%;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px;
+    }
+
+    canvas {
+      display: block;
+      min-width: 100%;
+      height: 260px;
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .empty {
+      padding: 26px 14px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (min-width: 760px) {
+      .app {
+        width: min(1180px, calc(100% - 32px));
+        padding: 28px 0 40px;
+      }
+
+      h1 {
+        font-size: clamp(34px, 4vw, 42px);
+      }
+
+      .subtitle {
+        font-size: 16px;
+      }
+
+      .kpi-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .chart-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (orientation: landscape) and (max-height: 520px) {
+      .kpi-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .chart-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      canvas {
+        height: 300px;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html" aria-current="page">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+  <main class="app">
+    <header>
+      <div>
+        <h1>Grafy</h1>
+        <p class="subtitle">Grafy vyjazdov, casu treningu, objemu podla sportu a kalorickych dat z denneho zapisu.</p>
+      </div>
+    </header>
+
+    <section class="kpi-grid" id="kpis"></section>
+
+    <section class="chart-grid">
+      <article class="panel">
+        <div class="panel-inner">
+          <div class="chart-head">
+            <h2 class="panel-title">Cas treningu za poslednych 14 dni</h2>
+            <div class="chart-tools" data-chart="timeChart"></div>
+          </div>
+          <div class="chart-scroll"><canvas id="timeChart" width="720" height="300"></canvas></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-inner">
+          <div class="chart-head">
+            <h2 class="panel-title">Vyjazdy a treningy podla typu</h2>
+            <div class="chart-tools" data-chart="typeChart"></div>
+          </div>
+          <div class="chart-scroll"><canvas id="typeChart" width="720" height="300"></canvas></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-inner">
+          <div class="chart-head">
+            <h2 class="panel-title">Sacharidy v jedalnicku</h2>
+            <div class="chart-tools" data-chart="carbChart"></div>
+          </div>
+          <div class="chart-scroll"><canvas id="carbChart" width="720" height="300"></canvas></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-inner">
+          <div class="chart-head">
+            <h2 class="panel-title">Kcal v jedalnicku</h2>
+            <div class="chart-tools" data-chart="kcalChart"></div>
+          </div>
+          <div class="chart-scroll"><canvas id="kcalChart" width="720" height="300"></canvas></div>
+        </div>
+      </article>
+    </section>
+  </main>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script>
+    const trainings = readArray('flegma_tabulky_trainings_v1');
+    const diary = readArray('flegma_tabulky_diary_v1');
+    const chartState = {
+      timeChart: { zoom: 1, data: trainingTimeByDay(), unit: 'min' },
+      typeChart: { zoom: 1, data: trainingCountByType(), unit: 'ks' },
+      carbChart: { zoom: 1, data: diaryMacroByDay('carbs'), unit: 'g' },
+      kcalChart: { zoom: 1, data: diaryMacroByDay('kcal'), unit: 'kcal' }
+    };
+
+    renderKpis();
+    renderChartTools();
+    renderCharts();
+    window.addEventListener('resize', renderCharts);
+
+    function renderKpis() {
+      const plannedMinutes = trainings.reduce((sum, item) => sum + Number(item.plannedMinutes || 0), 0);
+      const actualMinutes = trainings.reduce((sum, item) => sum + Number(item.actual?.durationMinutes || 0), 0);
+      const rides = trainings.filter((item) => item.type === 'bike' || item.type === 'race').length;
+      const bricks = trainings.filter((item) => item.type === 'brick' || item.type === 'multi').length;
+      document.getElementById('kpis').innerHTML = `
+        ${kpi('Vyjazdy/sutaze', rides)}
+        ${kpi('Plan hodin', formatNumber(plannedMinutes / 60))}
+        ${kpi('Real hodin', formatNumber(actualMinutes / 60))}
+        ${kpi('Brick/multi', bricks)}
+      `;
+    }
+
+    function trainingTimeByDay() {
+      const days = lastDays(14);
+      return days.map((date) => ({
+        label: shortDate(date),
+        value: trainings
+          .filter((item) => item.date === date)
+          .reduce((sum, item) => sum + Number(item.actual?.durationMinutes || item.plannedMinutes || 0), 0)
+      }));
+    }
+
+    function trainingCountByType() {
+      const labels = {
+        fitko: 'Fitko',
+        bike: 'Bike',
+        run: 'Beh',
+        swim: 'Plav.',
+        brick: 'Brick',
+        multi: 'Multi',
+        race: 'Sutaz'
+      };
+      return Object.entries(labels).map(([type, label]) => ({
+        label,
+        value: trainings.filter((item) => item.type === type).length
+      }));
+    }
+
+    function diaryMacroByDay(key) {
+      const days = lastDays(14);
+      return days.map((date) => ({
+        label: shortDate(date),
+        value: diary
+          .filter((entry) => entry.date === date)
+          .reduce((sum, entry) => sum + Number(entry.values?.[key] || 0), 0)
+      }));
+    }
+
+    function renderChartTools() {
+      document.querySelectorAll('.chart-tools').forEach((tools) => {
+        const id = tools.dataset.chart;
+        tools.innerHTML = `
+          <button type="button" aria-label="Oddialit" onclick="zoomChart('${id}', -0.25)">-</button>
+          <span class="zoom-label" id="${id}Zoom">100%</span>
+          <button type="button" aria-label="Priblizit" onclick="zoomChart('${id}', 0.25)">+</button>
+          <button class="reset-zoom" type="button" onclick="resetZoom('${id}')">Reset</button>
+        `;
+      });
+    }
+
+    function renderCharts() {
+      Object.entries(chartState).forEach(([id, config]) => {
+        drawBarChart(id, config.data, config.unit, config.zoom);
+        const label = document.getElementById(`${id}Zoom`);
+        if (label) label.textContent = `${Math.round(config.zoom * 100)}%`;
+      });
+    }
+
+    function zoomChart(id, delta) {
+      const scroll = document.getElementById(id).parentElement;
+      const centerRatio = (scroll.scrollLeft + scroll.clientWidth / 2) / Math.max(1, scroll.scrollWidth);
+      chartState[id].zoom = clamp(chartState[id].zoom + delta, 0.75, 3);
+      drawBarChart(id, chartState[id].data, chartState[id].unit, chartState[id].zoom);
+      scroll.scrollLeft = (scroll.scrollWidth * centerRatio) - scroll.clientWidth / 2;
+      document.getElementById(`${id}Zoom`).textContent = `${Math.round(chartState[id].zoom * 100)}%`;
+    }
+
+    function resetZoom(id) {
+      chartState[id].zoom = 1;
+      drawBarChart(id, chartState[id].data, chartState[id].unit, 1);
+      document.getElementById(`${id}Zoom`).textContent = '100%';
+      document.getElementById(id).parentElement.scrollLeft = 0;
+    }
+
+    function drawBarChart(id, data, unit, zoom = 1) {
+      const canvas = document.getElementById(id);
+      const scroll = canvas.parentElement;
+      const cssWidth = Math.max(720, Math.round(scroll.clientWidth * zoom));
+      const cssHeight = Math.round(canvas.getBoundingClientRect().height || 260);
+      const ratio = window.devicePixelRatio || 1;
+      canvas.style.width = `${cssWidth}px`;
+      canvas.width = Math.round(cssWidth * ratio);
+      canvas.height = Math.round(cssHeight * ratio);
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      const drawWidth = cssWidth;
+      const drawHeight = cssHeight;
+      const padding = { top: 24, right: 18, bottom: 48, left: 48 };
+      const chartWidth = drawWidth - padding.left - padding.right;
+      const chartHeight = drawHeight - padding.top - padding.bottom;
+      const max = Math.max(1, ...data.map((item) => item.value));
+      const gap = 8;
+      const barWidth = Math.max(8, (chartWidth - gap * (data.length - 1)) / data.length);
+
+      ctx.clearRect(0, 0, drawWidth, drawHeight);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, drawWidth, drawHeight);
+      ctx.strokeStyle = '#4b647f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top);
+      ctx.lineTo(padding.left, drawHeight - padding.bottom);
+      ctx.lineTo(drawWidth - padding.right, drawHeight - padding.bottom);
+      ctx.stroke();
+
+      ctx.fillStyle = '#05070a';
+      ctx.font = '700 13px Arial';
+      ctx.fillText(`${formatNumber(max)} ${unit}`, 8, padding.top + 6);
+
+      data.forEach((item, index) => {
+        const x = padding.left + index * (barWidth + gap);
+        const barHeight = (item.value / max) * chartHeight;
+        const y = drawHeight - padding.bottom - barHeight;
+        ctx.fillStyle = '#dcebff';
+        roundRect(ctx, x, y, barWidth, barHeight, 8);
+        ctx.fill();
+        ctx.strokeStyle = '#005fcc';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#05070a';
+        ctx.save();
+        ctx.translate(x + barWidth / 2, drawHeight - 30);
+        ctx.rotate(-Math.PI / 5);
+        ctx.textAlign = 'right';
+        ctx.fillText(item.label, 0, 0);
+        ctx.restore();
+      });
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + width, y, x + width, y + height, r);
+      ctx.arcTo(x + width, y + height, x, y + height, r);
+      ctx.arcTo(x, y + height, x, y, r);
+      ctx.arcTo(x, y, x + width, y, r);
+      ctx.closePath();
+    }
+
+    function lastDays(count) {
+      const days = [];
+      const today = new Date();
+      for (let index = count - 1; index >= 0; index -= 1) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - index);
+        days.push(toDateKey(date));
+      }
+      return days;
+    }
+
+    function toDateKey(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function shortDate(date) {
+      return date.slice(5).replace('-', '.');
+    }
+
+    function kpi(label, value) {
+      return `
+        <div class="kpi">
+          <span>${label}</span>
+          <strong>${value}</strong>
+        </div>
+      `;
+    }
+
+    function readArray(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function formatNumber(value) {
+      return Number(value || 0).toLocaleString('sk-SK', { maximumFractionDigits: 1 });
+    }
+  </script>
+</body>
+</html>
