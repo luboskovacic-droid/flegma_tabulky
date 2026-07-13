@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v38-carb-floor-20260713';
+const CACHE_NAME = 'flegma-tabulky-v39-settings-persist-20260713';
 const APP_SHELL = [
   './',
   './index.html',

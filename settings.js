@@ -82,17 +82,28 @@
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (!raw) return cloneDefault();
       const parsed = JSON.parse(raw);
+      const configured = Boolean(parsed.configured);
+      const parsedSports = parsed.sports || {};
       return {
-        configured: Boolean(parsed.configured),
-        mode: parsed.mode || 'beginner',
-        sports: {
-          ...cloneDefault().sports,
-          ...(parsed.sports || {})
-        }
+        configured,
+        mode: normalizeMode(parsed.mode),
+        sports: readSports(parsedSports, configured)
       };
     } catch {
       return cloneDefault();
     }
+  }
+
+  function readSports(parsedSports, configured) {
+    return Object.fromEntries(Object.keys(SPORT_LABELS).map((type) => {
+      const hasSavedValue = Object.prototype.hasOwnProperty.call(parsedSports, type);
+      if (hasSavedValue) return [type, Boolean(parsedSports[type])];
+      return [type, configured ? false : Boolean(defaultSettings.sports[type])];
+    }));
+  }
+
+  function normalizeMode(mode) {
+    return mode === 'advanced' ? 'advanced' : 'beginner';
   }
 
   function cloneDefault() {
@@ -100,7 +111,11 @@
   }
 
   function saveSettings(settings) {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      configured: Boolean(settings.configured),
+      mode: normalizeMode(settings.mode),
+      sports: readSports(settings.sports || {}, true)
+    }));
   }
 
   function hasAnySport(settings) {
@@ -209,7 +224,7 @@
     });
     return {
       configured: true,
-      mode: form.querySelector('[name="app_mode"]')?.value || 'beginner',
+      mode: form.querySelector('[name="app_mode"]:checked')?.value || 'beginner',
       sports
     };
   }
