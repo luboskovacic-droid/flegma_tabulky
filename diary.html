@@ -1042,16 +1042,49 @@
 
       const protein = weight * (isWaistReduction(profile) && !isCarbload ? Math.max(multipliers.protein, 2.1) : multipliers.protein);
       const fat = weight * (isWaistReduction(profile) && !isCarbload ? Math.min(multipliers.fat, 0.75) : multipliers.fat);
+      const kcal = estimateTargetKcal(profile, carbs, protein, fat);
+      if (!isCarbload) {
+        const kcalCarbs = (kcal - (protein * 4) - (fat * 9)) / 4;
+        const bounds = carbBounds(profile, mode, training);
+        carbs = clampNumber(Math.max(carbs, kcalCarbs), bounds.min, bounds.max);
+      }
       const sugar = isCarbload
         ? carbloadSugarLimit(weight, carbload, training)
         : Math.max(25, weight * (isWaistReduction(profile) ? Math.min(multipliers.sugar, 0.55) : multipliers.sugar));
       const fiber = Math.max(isCarbload ? 16 : 22, Math.min(isCarbload ? 25 : 40, weight * multipliers.fiber));
-      const kcal = estimateTargetKcal(profile, carbs, protein, fat);
 
       const targets = { kcal, protein, carbs, fat, sugar, fiber };
       return window.FlegmaPersonalization
         ? window.FlegmaPersonalization.adaptMacroTargets(targets, { profile, training, isCarbload })
         : targets;
+    }
+
+    function carbBounds(profile, mode, training) {
+      const weight = profile.weight || 80;
+      const hours = Number(profile.trainingHours) || 0;
+      const sportFloor = hours >= 8 ? 2.8 : hours >= 4 ? 2.4 : 2.0;
+      const goalFloor = isWaistReduction(profile) || profile.goal === 'lose' ? sportFloor : 2.5;
+      const modeMin = {
+        rest: goalFloor,
+        gym: Math.max(goalFloor, 2.6),
+        training: 3.2,
+        hard: 4.2,
+        multi: 4.8,
+        race: 5.2
+      }[mode] || goalFloor;
+      const modeMax = {
+        rest: hours >= 4 ? 4.0 : 3.4,
+        gym: 4.2,
+        training: 6.0,
+        hard: 7.5,
+        multi: 8.5,
+        race: 9.5
+      }[mode] || 4.0;
+      const trainingBonus = training ? Math.min(1.2, (Number(training.plannedMinutes) || 0) / 180) : 0;
+      return {
+        min: weight * modeMin,
+        max: weight * (modeMax + trainingBonus)
+      };
     }
 
     function observePersonalization(date, totals, coach, profile, training, checkin, targetWater) {
