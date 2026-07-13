@@ -32,13 +32,20 @@
   };
 
   function today() {
-    return new Date().toISOString().slice(0, 10);
+    return formatLocalDate(new Date());
   }
 
   function addDays(dateText, days) {
     const date = new Date(`${dateText}T00:00:00`);
     date.setDate(date.getDate() + days);
-    return date.toISOString().slice(0, 10);
+    return formatLocalDate(date);
+  }
+
+  function formatLocalDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   function loadProfile() {
@@ -146,14 +153,15 @@
     const trainingMinutes = Number(training?.plannedMinutes) || 0;
     const intensityFactor = { easy: 5, steady: 7, hard: 9, race: 10 }[training?.intensity] || 0;
     const trainingExtra = trainingMinutes * intensityFactor;
-    return Math.round((base + trainingExtra) / 50) * 50;
+    const target = Math.round((base + trainingExtra) / 50) * 50;
+    return window.FlegmaPersonalization ? window.FlegmaPersonalization.adaptHydrationTarget(target) : target;
   }
 
   function hydrationStatus(intakeMl, targetMl) {
     if (!targetMl) return '';
     if (intakeMl >= targetMl) return 'is-ok';
     if (intakeMl >= targetMl * 0.75) return 'is-low';
-    return 'is-over';
+    return 'is-low';
   }
 
   function bodyComposition(profile = loadProfile()) {

@@ -192,6 +192,7 @@
 
   <script src="pwa.js" defer></script>
   <script src="settings.js" defer></script>
+  <script src="personalization.js"></script>
   <script src="wellness.js"></script>
   <script>
     const fields = ['date', 'weight', 'waist', 'sleepHours', 'sleepQuality', 'fatigue', 'soreness', 'waterMl', 'trainingDone'];
@@ -219,6 +220,11 @@
       event.preventDefault();
       const data = readForm();
       FlegmaWellness.upsertCheckin(data.date, data);
+      if (window.FlegmaPersonalization) {
+        const profile = FlegmaWellness.loadProfile();
+        const training = FlegmaWellness.trainingForDate(data.date);
+        window.FlegmaPersonalization.observeCheckin(data.date, data, FlegmaWellness.hydrationTarget(profile, training));
+      }
       showNotice('Check-in ulozeny.');
       render();
     });

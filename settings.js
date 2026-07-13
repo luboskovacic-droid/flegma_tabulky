@@ -47,6 +47,7 @@
     const settings = readSettings();
     applyVisibility(settings);
     setupForms(settings);
+    setupPersonalization();
     filterCalendarType(settings);
   });
 
@@ -219,7 +220,7 @@
 
   function dailyFocus({ profile = {}, checkin = {}, training = null, diaryTotals = null } = {}) {
     const weight = Number(profile.weight) || Number(checkin.weight) || 80;
-    const waterTarget = Math.round(weight * (training ? 42 : 35));
+    const waterTarget = hydrationTarget(profile, training, weight);
     const water = Number(checkin.waterMl) || 0;
     const sleep = Number(checkin.sleepHours) || 0;
     const fatigue = Number(checkin.fatigue) || 0;
@@ -252,6 +253,15 @@
       multi: 'multi-sport',
       race: 'sutaz'
     }[type] || 'trening';
+  }
+
+  function hydrationTarget(profile = {}, training = null, fallbackWeight = 80) {
+    if (window.FlegmaWellness?.hydrationTarget) return FlegmaWellness.hydrationTarget(profile, training);
+    const weight = Number(profile.weight) || Number(fallbackWeight) || 80;
+    const base = weight * 35;
+    const minutes = Number(training?.plannedMinutes) || 0;
+    const factor = { easy: 5, steady: 7, hard: 9, race: 10 }[training?.intensity] || 0;
+    return Math.round((base + (minutes * factor)) / 50) * 50;
   }
 
   function clampNumber(value, min, max) {
@@ -310,5 +320,23 @@
       form.parentElement.insertBefore(notice, form);
     }
     if (notice) notice.hidden = !noSports;
+  }
+
+  function setupPersonalization() {
+    renderPersonalizationSummary();
+    document.querySelectorAll('[data-personalization-reset]').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (!window.FlegmaPersonalization) return;
+        window.FlegmaPersonalization.reset();
+        renderPersonalizationSummary();
+      });
+    });
+  }
+
+  function renderPersonalizationSummary() {
+    const element = document.querySelector('[data-personalization-summary]');
+    if (!element || !window.FlegmaPersonalization) return;
+    const summary = window.FlegmaPersonalization.summary();
+    element.textContent = `Voda ${summary.hydration}, sacharidy ${summary.carbs}, kcal korekcia ${summary.kcalBias > 0 ? '+' : ''}${summary.kcalBias} kcal, regeneracia ${summary.rest}. Data ostavaju len v tomto zariadeni.`;
   }
 })();

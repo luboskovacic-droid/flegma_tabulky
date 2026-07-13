@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v30-beginner-coach-20260713';
+const CACHE_NAME = 'flegma-tabulky-v33-personalized-pwa-loader-20260713';
 const APP_SHELL = [
   './',
   './index.html',
@@ -19,6 +19,7 @@ const APP_SHELL = [
   './ui.css',
   './pwa.js',
   './settings.js',
+  './personalization.js',
   './wellness.js',
   './food-seeds.js',
   './manifest.webmanifest',

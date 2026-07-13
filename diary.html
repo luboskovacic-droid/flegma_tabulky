@@ -576,6 +576,7 @@
 
   <script src="pwa.js" defer></script>
   <script src="settings.js" defer></script>
+  <script src="personalization.js"></script>
   <script src="wellness.js"></script>
   <script src="food-seeds.js"></script>
   <script>
@@ -711,6 +712,7 @@
       const checkin = window.FlegmaWellness ? FlegmaWellness.checkinForDate(state.date) : null;
       const targetWater = window.FlegmaWellness ? FlegmaWellness.hydrationTarget(profile, dayTraining) : Math.round((profile.weight || 80) * 35);
       const waterMl = Number(checkin?.waterMl) || 0;
+      observePersonalization(state.date, totals, coach, profile, dayTraining, checkin, targetWater);
 
       foodOptions.innerHTML = state.foods
         .map((food) => `<option value="${escapeHtml(food.name)}"></option>`)
@@ -738,9 +740,14 @@
         </div>
         <form class="inline-water" onsubmit="saveWater(event)">
           <label>
-            Zapis vodu ml
+            Dnes vypite spolu ml
             <input id="waterInput" type="number" min="0" max="10000" step="50" inputmode="numeric" value="${waterMl || ''}">
           </label>
+          <div class="preset-row">
+            <button type="button" class="secondary" onclick="addWater(250)">+250 ml</button>
+            <button type="button" class="secondary" onclick="addWater(500)">+500 ml</button>
+            <button type="button" class="secondary" onclick="addWater(750)">+750 ml</button>
+          </div>
           <button type="submit">Ulozit vodu</button>
         </form>
       `;
@@ -896,9 +903,25 @@
     function saveWater(event) {
       event.preventDefault();
       if (!window.FlegmaWellness) return;
-      const water = readNumber(document.getElementById('waterInput').value);
+      const water = clampNumber(readNumber(document.getElementById('waterInput').value), 0, 15000);
       FlegmaWellness.upsertCheckin(state.date, { waterMl: water });
+      if (window.FlegmaPersonalization) {
+        window.FlegmaPersonalization.observeCheckin(state.date, { ...(FlegmaWellness.checkinForDate(state.date) || {}), waterMl: water }, targetWaterForDate(state.date));
+      }
       showNotice('Hydratacia ulozena.');
+      render();
+    }
+
+    function addWater(amount) {
+      if (!window.FlegmaWellness) return;
+      const checkin = FlegmaWellness.checkinForDate(state.date) || {};
+      const current = Number(checkin.waterMl) || 0;
+      const next = clampNumber(current + amount, 0, 15000);
+      FlegmaWellness.upsertCheckin(state.date, { waterMl: next });
+      if (window.FlegmaPersonalization) {
+        window.FlegmaPersonalization.observeCheckin(state.date, { ...(FlegmaWellness.checkinForDate(state.date) || {}), waterMl: next }, targetWaterForDate(state.date));
+      }
+      showNotice(`Voda +${formatNumber(amount)} ml.`);
       render();
     }
 
@@ -906,7 +929,7 @@
       if (!target) return '';
       if (water >= target) return 'is-ok';
       if (water >= target * 0.75) return 'is-low';
-      return 'is-over';
+      return 'is-low';
     }
 
     function calculateCoach(profile, totals, event, dayTraining) {
@@ -1011,7 +1034,26 @@
       const fiber = Math.max(isCarbload ? 16 : 22, Math.min(isCarbload ? 25 : 40, weight * multipliers.fiber));
       const kcal = estimateTargetKcal(profile, carbs, protein, fat);
 
-      return { kcal, protein, carbs, fat, sugar, fiber };
+      const targets = { kcal, protein, carbs, fat, sugar, fiber };
+      return window.FlegmaPersonalization
+        ? window.FlegmaPersonalization.adaptMacroTargets(targets, { profile, training, isCarbload })
+        : targets;
+    }
+
+    function observePersonalization(date, totals, coach, profile, training, checkin, targetWater) {
+      if (!window.FlegmaPersonalization) return;
+      window.FlegmaPersonalization.observeDiaryDay(date, totals, {
+        kcal: coach.targetKcal,
+        carbs: coach.targetCarbs,
+        protein: coach.targetProtein
+      }, { profile, training });
+      if (checkin) window.FlegmaPersonalization.observeCheckin(date, checkin, targetWater);
+    }
+
+    function targetWaterForDate(date) {
+      const profile = loadProfile();
+      const training = findTrainingForDate(date);
+      return window.FlegmaWellness ? FlegmaWellness.hydrationTarget(profile, training) : Math.round((profile.weight || 80) * 35);
     }
 
     function temperamentSettings(profile) {
@@ -1350,7 +1392,14 @@
     }
 
     function today() {
-      return new Date().toISOString().slice(0, 10);
+      return formatLocalDate(new Date());
+    }
+
+    function formatLocalDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     }
 
     function formatNumber(value) {

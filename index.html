@@ -255,6 +255,7 @@
   </div>
   <script src="pwa.js" defer></script>
   <script src="settings.js" defer></script>
+  <script src="personalization.js"></script>
   <script>
     const stats = document.getElementById('homeStats');
     const focus = document.getElementById('todayFocus');
@@ -281,7 +282,7 @@
     }
 
     function renderTodayFocus() {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = formatLocalDate(new Date());
       const profile = readObject('flegma_tabulky_profile_v1', {});
       const checkin = readArray('flegma_tabulky_checkins_v1').find((item) => item.date === today) || {};
       const training = readArray('flegma_tabulky_trainings_v1').find((item) => item.date === today) || null;
@@ -333,6 +334,13 @@
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#039;');
+    }
+
+    function formatLocalDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     }
   </script>
 </body>

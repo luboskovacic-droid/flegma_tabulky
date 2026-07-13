@@ -13,6 +13,18 @@
       window.FlegmaWellness.notifyDueMessages();
       return;
     }
+    if (!window.FlegmaPersonalization) {
+      const personalization = document.createElement('script');
+      personalization.src = './personalization.js';
+      personalization.onload = loadWellnessScript;
+      personalization.onerror = loadWellnessScript;
+      document.head.appendChild(personalization);
+      return;
+    }
+    loadWellnessScript();
+  }
+
+  function loadWellnessScript() {
     const script = document.createElement('script');
     script.src = './wellness.js';
     script.onload = function () {
