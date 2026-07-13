@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Poznamky - Flegma tabulky</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    .notes-layout {
+      display: grid;
+      gap: 12px;
+    }
+
+    .editor-panel,
+    .notes-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .editor-toolbar {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .note-editor {
+      min-height: 340px;
+      line-height: 1.5;
+    }
+
+    .note-card {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 2px solid #9aa8b8;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .note-card h3 {
+      margin: 0;
+      color: #05070a;
+      font-size: 18px;
+    }
+
+    .note-meta {
+      color: #3d4b5c;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .note-preview {
+      color: #334155;
+      font-weight: 700;
+      white-space: pre-wrap;
+    }
+
+    @media (min-width: 920px) {
+      .notes-layout {
+        grid-template-columns: minmax(0, 1.25fr) 360px;
+        align-items: start;
+      }
+
+      .editor-panel {
+        position: sticky;
+        top: 18px;
+      }
+
+      .editor-toolbar {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="checkin.html">Check-in</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="notes.html" aria-current="page">Poznamky</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+
+  <main class="app">
+    <header>
+      <div>
+        <h1>Poznamky</h1>
+        <p class="subtitle">Miesto na myslienky, napady a zoznam upgradeov pre appku. Uklada sa lokalne v tomto zariadeni.</p>
+      </div>
+    </header>
+
+    <section class="notes-layout">
+      <article class="panel editor-panel">
+        <div class="panel-inner editor-panel">
+          <h2 class="panel-title" id="editorTitle">Nova poznamka</h2>
+          <input id="noteId" type="hidden">
+          <label>
+            Nadpis
+            <input id="noteTitle" maxlength="100" placeholder="napr. Upgrade receptov">
+          </label>
+          <label>
+            Text
+            <textarea id="noteText" class="note-editor" placeholder="- co zlepsit&#10;- preco&#10;- priorita"></textarea>
+          </label>
+          <div class="editor-toolbar">
+            <button type="button" class="primary" id="saveNote">Ulozit</button>
+            <button type="button" id="newNote">Nova</button>
+            <button type="button" id="duplicateNote">Duplikovat</button>
+            <button type="button" class="danger" id="deleteNote">Vymazat</button>
+          </div>
+          <div class="notice" id="notice" role="status"></div>
+          <p class="muted" id="autosaveStatus">Rozpracovana poznamka sa priebezne uklada.</p>
+        </div>
+      </article>
+
+      <aside class="panel">
+        <div class="panel-inner">
+          <h2 class="panel-title">Zoznam</h2>
+          <input id="searchNotes" placeholder="Hladat v poznamkach...">
+          <div class="notes-list" id="notesList"></div>
+          <div class="empty" id="emptyState">Zatial nemas ziadnu poznamku.</div>
+        </div>
+      </aside>
+    </section>
+  </main>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script>
+    const NOTES_KEY = 'flegma_tabulky_notes_v1';
+    const DRAFT_KEY = 'flegma_tabulky_notes_draft_v1';
+
+    const state = {
+      notes: loadNotes(),
+      search: ''
+    };
+
+    const noteId = document.getElementById('noteId');
+    const noteTitle = document.getElementById('noteTitle');
+    const noteText = document.getElementById('noteText');
+    const editorTitle = document.getElementById('editorTitle');
+    const notesList = document.getElementById('notesList');
+    const emptyState = document.getElementById('emptyState');
+    const searchNotes = document.getElementById('searchNotes');
+    const notice = document.getElementById('notice');
+    const autosaveStatus = document.getElementById('autosaveStatus');
+
+    document.getElementById('saveNote').addEventListener('click', saveCurrentNote);
+    document.getElementById('newNote').addEventListener('click', resetEditor);
+    document.getElementById('duplicateNote').addEventListener('click', duplicateCurrentNote);
+    document.getElementById('deleteNote').addEventListener('click', deleteCurrentNote);
+    searchNotes.addEventListener('input', () => {
+      state.search = searchNotes.value.trim().toLowerCase();
+      render();
+    });
+    [noteTitle, noteText].forEach((field) => {
+      field.addEventListener('input', saveDraft);
+    });
+
+    loadDraft();
+    render();
+
+    function saveCurrentNote() {
+      const title = noteTitle.value.trim() || 'Bez nazvu';
+      const text = noteText.value.trim();
+      if (!text && title === 'Bez nazvu') {
+        showNotice('Najprv napis poznamku.');
+        return;
+      }
+
+      const id = noteId.value || crypto.randomUUID();
+      const existing = state.notes.find((note) => note.id === id);
+      const note = {
+        id,
+        title,
+        text,
+        createdAt: existing?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      state.notes = [note, ...state.notes.filter((item) => item.id !== id)];
+      saveNotes();
+      noteId.value = id;
+      editorTitle.textContent = 'Upravit poznamku';
+      localStorage.removeItem(DRAFT_KEY);
+      showNotice('Poznamka ulozena.');
+      render();
+    }
+
+    function editNote(id) {
+      const note = state.notes.find((item) => item.id === id);
+      if (!note) return;
+      noteId.value = note.id;
+      noteTitle.value = note.title;
+      noteText.value = note.text;
+      editorTitle.textContent = 'Upravit poznamku';
+      saveDraft();
+      noteTitle.focus();
+    }
+
+    function duplicateCurrentNote() {
+      const title = noteTitle.value.trim();
+      const text = noteText.value.trim();
+      if (!title && !text) {
+        showNotice('Nie je co duplikovat.');
+        return;
+      }
+      noteId.value = '';
+      noteTitle.value = `${title || 'Bez nazvu'} - kopia`;
+      saveCurrentNote();
+    }
+
+    function deleteCurrentNote() {
+      const id = noteId.value;
+      if (!id) {
+        resetEditor();
+        return;
+      }
+      const note = state.notes.find((item) => item.id === id);
+      if (!note || !confirm(`Vymazat poznamku "${note.title}"?`)) return;
+      state.notes = state.notes.filter((item) => item.id !== id);
+      saveNotes();
+      resetEditor();
+      showNotice('Poznamka vymazana.');
+      render();
+    }
+
+    function resetEditor() {
+      noteId.value = '';
+      noteTitle.value = '';
+      noteText.value = '';
+      editorTitle.textContent = 'Nova poznamka';
+      localStorage.removeItem(DRAFT_KEY);
+      autosaveStatus.textContent = 'Rozpracovana poznamka sa priebezne uklada.';
+      noteTitle.focus();
+    }
+
+    function saveDraft() {
+      const draft = {
+        id: noteId.value,
+        title: noteTitle.value,
+        text: noteText.value,
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      autosaveStatus.textContent = `Koncept ulozeny ${new Date().toLocaleTimeString('sk-SK', { hour: '2-digit', minute: '2-digit' })}.`;
+    }
+
+    function loadDraft() {
+      try {
+        const draft = JSON.parse(localStorage.getItem(DRAFT_KEY));
+        if (!draft) return;
+        noteId.value = draft.id || '';
+        noteTitle.value = draft.title || '';
+        noteText.value = draft.text || '';
+        editorTitle.textContent = draft.id ? 'Upravit poznamku' : 'Nova poznamka';
+      } catch {
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    }
+
+    function render() {
+      const visible = state.notes.filter((note) => {
+        const haystack = `${note.title} ${note.text}`.toLowerCase();
+        return !state.search || haystack.includes(state.search);
+      });
+      notesList.innerHTML = visible.map((note) => `
+        <article class="note-card">
+          <h3>${escapeHtml(note.title)}</h3>
+          <div class="note-meta">${formatDate(note.updatedAt)}</div>
+          <div class="note-preview">${escapeHtml(preview(note.text))}</div>
+          <button type="button" onclick="editNote('${note.id}')">Otvorit</button>
+        </article>
+      `).join('');
+      emptyState.hidden = Boolean(visible.length);
+    }
+
+    function loadNotes() {
+      try {
+        return JSON.parse(localStorage.getItem(NOTES_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveNotes() {
+      localStorage.setItem(NOTES_KEY, JSON.stringify(state.notes));
+    }
+
+    function preview(text) {
+      const trimmed = String(text || '').trim();
+      return trimmed.length > 180 ? `${trimmed.slice(0, 180)}...` : trimmed;
+    }
+
+    function formatDate(value) {
+      if (!value) return '-';
+      return new Date(value).toLocaleString('sk-SK', { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function showNotice(message) {
+      notice.textContent = message;
+      notice.classList.add('is-visible');
+      window.clearTimeout(showNotice.timeout);
+      showNotice.timeout = window.setTimeout(() => {
+        notice.classList.remove('is-visible');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>

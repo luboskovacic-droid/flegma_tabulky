@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v22-water-save-fix-20260713';
+const CACHE_NAME = 'flegma-tabulky-v23-notes-20260713';
 const APP_SHELL = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './foods.html',
   './recipes.html',
   './recommendations.html',
+  './notes.html',
   './settings.html',
   './graphs.html',
   './data.html',
