@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v23-notes-20260713';
+const CACHE_NAME = 'flegma-tabulky-v25-carbload-function-20260713';
 const APP_SHELL = [
   './',
   './index.html',

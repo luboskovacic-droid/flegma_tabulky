@@ -887,7 +887,7 @@
       const weight = profile.weight || 80;
       const isCarbload = Boolean(event);
       const dayMode = resolveDayMode(dayTraining, isCarbload);
-      const carbload = calculateCarbloadTarget(weight, event);
+      const carbload = calculateCarbloadTarget(profile, event);
       const temperament = temperamentSettings(profile);
       const macroTargets = calculateMacroTargets(profile, dayTraining, carbload, isCarbload, temperament);
       const targetCarbs = macroTargets.carbs;
@@ -906,7 +906,7 @@
       let message = `${dayMode.label}: zjedz cca ${formatNumber(targetProtein)} g B, ${formatNumber(targetCarbs)} g S, ${formatNumber(targetFat)} g T, cukry max ${formatNumber(sugarLimit)} g, vlaknina cca ${formatNumber(fiberTarget)} g.`;
 
       if (isCarbload) {
-        message += ` Carbload ${carbload.label}: ${carbload.percent}% z 3-dnoveho planu, intenzita ${carbload.intensity}. ${temperamentText(temperament)} Vysoko drz sacharidy celkovo, cukry kontrolovane; vacsina nech ide z ryze, cestovin, zemiakov alebo peciva.`;
+        message += ` Carbload ${carbload.label}: ${carbload.percent}% z 3-dnoveho planu, model ${formatNumber(carbload.gramsPerKg)} g/kg podla vykonu/casu/intenzity/prevysenia/hmotnosti/ciela. ${temperamentText(temperament)} Vysoko drz sacharidy celkovo, cukry kontrolovane; vacsina nech ide z ryze, cestovin, zemiakov alebo peciva.`;
       } else if (profile.goal === 'carbload') {
         message += ` V profile mas carbload, ale v kalendari nie je trening/sutaz v 3-dnovom okne, preto nepocitam vysoky carbload ciel.`;
       }
@@ -1028,15 +1028,29 @@
       return Math.min(max, Math.max(min, value));
     }
 
-    function calculateCarbloadTarget(weight, event) {
+    function calculateCarbloadTarget(profile, event) {
+      const weight = profile.weight || 80;
       if (!event) {
-        return { targetCarbs: weight * 9, percent: 100, label: 'bez udalosti', intensity: 'manual' };
+        const model = calculateCarbloadModel({ weight, goal: profile.goal });
+        return { targetCarbs: model.totalCarbs, percent: 100, label: 'bez udalosti', intensity: 'manual', gramsPerKg: model.gramsPerKg, model };
       }
 
-      const total = weight * carbloadMultiplier(event.training);
+      const model = calculateCarbloadModel({
+        power: event.training?.actual?.avgPower || 0,
+        minutes: event.training?.gpx?.estimatedMinutes || event.training?.actual?.durationMinutes || event.training?.plannedMinutes || 60,
+        intensity: event.training?.intensity,
+        elevationGain: event.training?.gpx?.elevationGain || 0,
+        weight,
+        goal: profile.goal,
+        type: event.training?.type
+      });
+      const total = model.totalCarbs;
       const percentage = { 2: 0.25, 1: 0.6, 0: 0.15 }[event.daysToEvent] || 0;
       return {
         targetCarbs: total * percentage,
+        totalCarbs: total,
+        gramsPerKg: model.gramsPerKg,
+        model,
         percent: Math.round(percentage * 100),
         label: event.daysToEvent === 0 ? 'den vykonu' : `${event.daysToEvent + 1}. den pred vykonom`,
         intensity: event.training.intensity || 'steady',
@@ -1044,10 +1058,25 @@
       };
     }
 
-    function carbloadMultiplier(training) {
-      const base = { easy: 6, steady: 8, hard: 9, race: 10 }[training?.intensity] || 8;
-      const typeBonus = { race: 1, brick: 0.5, multi: 1, bike: 0.3, run: 0, swim: -0.5, fitko: -1 }[training?.type] || 0;
-      return Math.max(4, base + typeBonus);
+    function calculateCarbloadModel({ power = 0, minutes = 60, intensity = 'steady', elevationGain = 0, weight = 80, goal = 'fit', type = 'bike' } = {}) {
+      const hours = Math.max(0.25, Number(minutes || 0) / 60);
+      const elevation = Math.max(0, Number(elevationGain) || 0);
+      const bodyWeight = Math.max(35, Number(weight) || 80);
+      const intensityBonus = { easy: 0, steady: 0.8, hard: 1.5, race: 2.2 }[intensity] ?? 0.8;
+      const typeBonus = { race: 0.8, brick: 0.5, multi: 0.8, bike: 0.3, run: 0.2, swim: -0.3, fitko: -1 }[type] || 0;
+      const goalFactor = { carbload: 1.08, fit: 1, lose: 0.95, waist: 0.95, gain: 1.05 }[goal] || 1;
+      const routeGkg = 3.5 + (hours * 0.8) + (elevation / 700) + intensityBonus + typeBonus;
+      const powerKcal = power ? (Number(power) * hours * 3600) / 4184 : 0;
+      const powerGkg = powerKcal ? ((powerKcal * 0.65) / 4) / bodyWeight : 0;
+      const gramsPerKg = clampNumber(Math.max(routeGkg, powerGkg * 1.35) * goalFactor, 4, 12);
+      return {
+        totalCarbs: bodyWeight * gramsPerKg,
+        gramsPerKg,
+        hours,
+        elevationGain: elevation,
+        powerKcal,
+        goalFactor
+      };
     }
 
     function findCarbloadEvent(date) {

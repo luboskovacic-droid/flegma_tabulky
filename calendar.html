@@ -467,6 +467,7 @@
             ${meta('Plan', `${formatNumber(training.plannedMinutes)} min`)}
             ${meta('Sacharidy', `${formatNumber(training.carbsPerHour)} g/h`)}
             ${meta('Spolu S', `${formatNumber(totalTrainingCarbs(training))} g`)}
+            ${meta('GPX', training.gpx ? `${formatNumber(training.gpx.distanceKm)} km / ${training.gpx.difficultyLabel}${training.gpx.carbloadModel ? ` / ${formatNumber(training.gpx.carbloadModel.gramsPerKg)} g/kg` : ''}` : '-')}
             ${meta('Fitko', gymLabel(training.gymMode))}
             ${meta('Realita', training.actual ? `${formatNumber(training.actual.durationMinutes)} min` : '-')}
           </div>
@@ -549,6 +550,14 @@
     }
 
     function normalizeTrainingCarbs(training) {
+      if (training.carbRule === 'gpx-route' && training.gpx?.recommendedCarbsPerHour) {
+        return {
+          ...training,
+          startTime: training.startTime || '09:00',
+          carbsPerHour: training.gpx.recommendedCarbsPerHour,
+          carbRule: 'gpx-route'
+        };
+      }
       return {
         ...training,
         startTime: training.startTime || '09:00',

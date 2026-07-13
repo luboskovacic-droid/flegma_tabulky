@@ -306,7 +306,7 @@
     const trainings = loadTrainings();
     const training = trainings.find((item) => item.id === id) || trainings[0];
     const profile = loadProfile();
-    let gpxAnalysis = null;
+    let gpxAnalysis = training?.gpx || null;
     let fitAnalysis = training?.actual || null;
 
     const title = document.getElementById('title');
@@ -337,9 +337,10 @@
       const weight = profile.weight || 80;
       const plannedHours = training.plannedMinutes / 60;
       const plannedCarbs = training.carbsPerHour * plannedHours;
-      const intensityRate = carbsPerHourByIntensity(training.intensity);
-      const estimatedNeed = Math.max(plannedCarbs, intensityRate * plannedHours);
-      const carbload = calculateCarbloadPlan(weight, training);
+      const intensityRate = gpxAnalysis?.recommendedCarbsPerHour || carbsPerHourByIntensity(training.intensity);
+      const routeHours = gpxAnalysis?.estimatedMinutes ? gpxAnalysis.estimatedMinutes / 60 : plannedHours;
+      const estimatedNeed = Math.max(plannedCarbs, intensityRate * routeHours);
+      const carbload = calculateCarbloadPlan(weight, training, profile);
       const zonesData = calculateZones(profile);
       const actual = fitAnalysis;
       const recovery = calculateRecovery(weight, training, estimatedNeed, gpxAnalysis, actual);
@@ -348,9 +349,12 @@
       subtitle.textContent = `${training.date} - ${typeLabel(training.type)} - ${formatNumber(training.plannedMinutes)} min`;
       planMetrics.innerHTML = `
         ${metric('Plan cas', `${formatNumber(training.plannedMinutes)} min`)}
+        ${metric('Odhad GPX cas', gpxAnalysis?.estimatedMinutes ? `${formatNumber(gpxAnalysis.estimatedMinutes)} min` : '-')}
+        ${metric('Odporucane g/h', `${formatNumber(intensityRate)} g/h`)}
         ${metric('Sacharidy pocas', `${formatNumber(plannedCarbs)} g`)}
         ${metric('Odhad potreby', `${formatNumber(estimatedNeed)} g`)}
         ${metric('Carbload total', `${formatNumber(carbload.total)} g`)}
+        ${metric('Carbload g/kg', `${formatNumber(carbload.gramsPerKg)} g/kg`)}
         ${metric('3. den', `${formatNumber(carbload.day3)} g`)}
         ${metric('2. den', `${formatNumber(carbload.day2)} g`)}
         ${metric('Den vykonu', `${formatNumber(carbload.day1)} g`)}
@@ -381,6 +385,13 @@
       if (!file) return;
       const text = await file.text();
       gpxAnalysis = parseGpx(text);
+      training.gpx = gpxAnalysis;
+      training.carbsPerHour = gpxAnalysis.recommendedCarbsPerHour;
+      training.carbRule = 'gpx-route';
+      if (gpxAnalysis.estimatedMinutes > training.plannedMinutes) {
+        training.plannedMinutes = Math.round(gpxAnalysis.estimatedMinutes / 5) * 5;
+      }
+      saveTrainings();
       render();
     }
 
@@ -402,11 +413,13 @@
       gpxMetrics.innerHTML = `
         ${metric('Vzdialenost', `${formatNumber(gpxAnalysis.distanceKm)} km`)}
         ${metric('Prevysenie+', `${formatNumber(gpxAnalysis.elevationGain)} m`)}
+        ${metric('Odhad casu', `${formatNumber(gpxAnalysis.estimatedMinutes)} min`)}
+        ${metric('Narocnost', gpxAnalysis.difficultyLabel)}
+        ${metric('Odporucane S', `${formatNumber(gpxAnalysis.recommendedCarbsPerHour)} g/h`)}
+        ${metric('Skore trasy', formatNumber(gpxAnalysis.routeScore))}
         ${metric('Body', formatNumber(gpxAnalysis.points))}
       `;
-      gpxNote.textContent = gpxAnalysis.elevationGain > 800
-        ? 'Trasa ma vysoke prevysenie: zvys sacharidy pocas vykonu a nechod do preteku s vysokou vlakninou.'
-        : 'Trasa je nacitana. Carbload bude presnejsi podla vzdialenosti a prevysenia.';
+      gpxNote.textContent = `GPX je ulozene k treningu. Plan sacharidov je prepocitany na ${formatNumber(gpxAnalysis.recommendedCarbsPerHour)} g/h. ${gpxAnalysis.note}`;
     }
 
     function renderFit() {
@@ -439,7 +452,53 @@
         const diff = points[i].ele - points[i - 1].ele;
         if (diff > 0) elevationGain += diff;
       }
-      return { points: points.length, distanceKm: distance, elevationGain };
+      const estimatedMinutes = estimateRouteMinutes(distance, elevationGain);
+      const routeScore = routeDifficultyScore(distance, elevationGain, estimatedMinutes);
+      const difficulty = routeDifficulty(routeScore);
+      const recommendedCarbsPerHour = routeCarbsPerHour(training, routeScore, estimatedMinutes);
+      return {
+        points: points.length,
+        distanceKm: distance,
+        elevationGain,
+        estimatedMinutes,
+        routeScore,
+        difficulty: difficulty.id,
+        difficultyLabel: difficulty.label,
+        recommendedCarbsPerHour,
+        carbloadModel: calculateCarbloadModel({
+          power: training.actual?.avgPower || 0,
+          minutes: estimatedMinutes,
+          intensity: training.intensity,
+          elevationGain,
+          weight: profile.weight || 80,
+          goal: profile.goal,
+          type: training.type
+        }),
+        note: difficulty.note
+      };
+    }
+
+    function estimateRouteMinutes(distanceKm, elevationGain) {
+      const movingHours = (distanceKm / 24) + (elevationGain / 650);
+      return Math.max(training.plannedMinutes || 30, movingHours * 60);
+    }
+
+    function routeDifficultyScore(distanceKm, elevationGain, estimatedMinutes) {
+      return distanceKm + (elevationGain / 10) + (estimatedMinutes / 6);
+    }
+
+    function routeDifficulty(score) {
+      if (score >= 190) return { id: 'race', label: 'velmi tazka', note: 'Rataj s vysokym prijmom sacharidov, nizsou vlakninou a planom napojov.' };
+      if (score >= 130) return { id: 'hard', label: 'tazka', note: 'Trasa je narocna, sacharidy rozdel pravidelne pocas jazdy.' };
+      if (score >= 75) return { id: 'steady', label: 'stredna', note: 'Stredna zataz, vhodne je priebezne doplnanie sacharidov.' };
+      return { id: 'easy', label: 'lahka', note: 'Lahsia trasa, pri kratkom case moze stacit voda a mensi snack.' };
+    }
+
+    function routeCarbsPerHour(training, score, estimatedMinutes) {
+      const base = carbsPerHourByIntensity(training.intensity);
+      const routeAdd = score >= 190 ? 25 : score >= 130 ? 15 : score >= 75 ? 5 : 0;
+      const durationAdd = estimatedMinutes >= 240 ? 10 : estimatedMinutes >= 150 ? 5 : 0;
+      return Math.min(120, Math.max(30, roundToFive(base + routeAdd + durationAdd)));
     }
 
     function parseFit(buffer) {
@@ -542,20 +601,50 @@
       return { carbsToRefill, kcalToRefill, fluids, message };
     }
 
-    function calculateCarbloadPlan(weight, training) {
-      const total = weight * carbloadMultiplier(training);
+    function calculateCarbloadPlan(weight, training, profile) {
+      const model = calculateCarbloadModel({
+        power: training?.actual?.avgPower || 0,
+        minutes: training?.gpx?.estimatedMinutes || training?.actual?.durationMinutes || training?.plannedMinutes || 60,
+        intensity: training?.intensity,
+        elevationGain: training?.gpx?.elevationGain || 0,
+        weight,
+        goal: profile?.goal,
+        type: training?.type
+      });
+      const total = model.totalCarbs;
       return {
         total,
+        gramsPerKg: model.gramsPerKg,
+        model,
         day3: total * 0.25,
         day2: total * 0.6,
         day1: total * 0.15
       };
     }
 
-    function carbloadMultiplier(training) {
-      const base = { easy: 6, steady: 8, hard: 9, race: 10 }[training?.intensity] || 8;
-      const typeBonus = { race: 1, brick: 0.5, multi: 1, bike: 0.3, run: 0, swim: -0.5, fitko: -1 }[training?.type] || 0;
-      return Math.max(4, base + typeBonus);
+    function calculateCarbloadModel({ power = 0, minutes = 60, intensity = 'steady', elevationGain = 0, weight = 80, goal = 'fit', type = 'bike' }) {
+      const hours = Math.max(0.25, Number(minutes || 0) / 60);
+      const elevation = Math.max(0, Number(elevationGain) || 0);
+      const bodyWeight = Math.max(35, Number(weight) || 80);
+      const intensityBonus = { easy: 0, steady: 0.8, hard: 1.5, race: 2.2 }[intensity] ?? 0.8;
+      const typeBonus = { race: 0.8, brick: 0.5, multi: 0.8, bike: 0.3, run: 0.2, swim: -0.3, fitko: -1 }[type] || 0;
+      const goalFactor = { carbload: 1.08, fit: 1, lose: 0.95, waist: 0.95, gain: 1.05 }[goal] || 1;
+      const routeGkg = 3.5 + (hours * 0.8) + (elevation / 700) + intensityBonus + typeBonus;
+      const powerKcal = power ? (Number(power) * hours * 3600) / 4184 : 0;
+      const powerGkg = powerKcal ? ((powerKcal * 0.65) / 4) / bodyWeight : 0;
+      const gramsPerKg = clampNumber(Math.max(routeGkg, powerGkg * 1.35) * goalFactor, 4, 12);
+      return {
+        totalCarbs: bodyWeight * gramsPerKg,
+        gramsPerKg,
+        hours,
+        elevationGain: elevation,
+        powerKcal,
+        goalFactor
+      };
+    }
+
+    function clampNumber(value, min, max) {
+      return Math.min(max, Math.max(min, value));
     }
 
     function calculateZones(profile) {
@@ -572,6 +661,10 @@
 
     function carbsPerHourByIntensity(intensity) {
       return { easy: 30, steady: 60, hard: 80, race: 90 }[intensity] || 60;
+    }
+
+    function roundToFive(valueNumber) {
+      return Math.round(valueNumber / 5) * 5;
     }
 
     function haversine(a, b) {
