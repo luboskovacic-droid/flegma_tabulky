@@ -127,7 +127,7 @@
       return;
     }
 
-    document.querySelectorAll('[href="calendar.html"], [href="fit-import.html"], [href="graphs.html"], [href="data.html"], [data-module="sports"], [data-module="analysis"]').forEach((element) => {
+    document.querySelectorAll('[href="calendar.html"], [href="fit-import.html"], [href="gym.html"], [href="graphs.html"], [href="data.html"], [data-module="sports"], [data-module="analysis"]').forEach((element) => {
       element.hidden = settings.configured && !anySport;
     });
 
@@ -216,7 +216,7 @@
   }
 
   function isHiddenModulePage() {
-    return ['graphs.html', 'data.html', 'calendar.html', 'fit-import.html', 'training.html'].includes(window.location.pathname.split('/').pop());
+    return ['graphs.html', 'data.html', 'calendar.html', 'fit-import.html', 'training.html', 'gym.html'].includes(window.location.pathname.split('/').pop());
   }
 
   function filterCalendarType(settings) {

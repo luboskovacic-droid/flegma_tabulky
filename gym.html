@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fitko cviky</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    .gym-layout,
+    .stack,
+    .exercise-list,
+    .plan-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .exercise-card,
+    .plan-card {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 2px solid #9aa8b8;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .exercise-card h3,
+    .plan-card h3 {
+      margin: 0;
+      color: #05070a;
+      font-size: 18px;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      padding: 4px 8px;
+      border: 2px solid #005fcc;
+      border-radius: 999px;
+      background: #dcebff;
+      color: #002f6c;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .plan-steps {
+      margin: 0;
+      padding-left: 18px;
+      color: #172033;
+      font-weight: 800;
+    }
+
+    .plan-steps li {
+      margin: 6px 0;
+    }
+
+    @media (min-width: 900px) {
+      .gym-layout {
+        grid-template-columns: 390px minmax(0, 1fr);
+        align-items: start;
+      }
+
+      .form-panel {
+        position: sticky;
+        top: 18px;
+      }
+
+      .control-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="checkin.html">Check-in</a>
+      <a href="gym.html" aria-current="page">Fitko</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="notes.html">Poznamky</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+
+  <main class="app">
+    <header>
+      <div>
+        <h1>Fitko cviky</h1>
+        <p class="subtitle">AI trener cvikov podla sportu: cyklistika, triatlon, futbal, beh, plavanie alebo vlastny sport.</p>
+      </div>
+    </header>
+
+    <section class="gym-layout">
+      <aside class="panel form-panel">
+        <div class="panel-inner stack">
+          <h2 class="panel-title">AI trener</h2>
+          <div class="control-row">
+            <label>
+              Sport
+              <select id="sport">
+                <option value="cycling">Cyklistika</option>
+                <option value="triathlon" selected>Triathlon</option>
+                <option value="football">Futbal</option>
+                <option value="run">Beh</option>
+                <option value="swim">Plavanie</option>
+                <option value="custom">Vlastny sport</option>
+              </select>
+            </label>
+            <label>
+              Vlastny sport
+              <input id="customSport" placeholder="napr. turistika">
+            </label>
+          </div>
+
+          <div class="control-row">
+            <label>
+              Blok
+              <select id="category">
+                <option value="core">Core</option>
+                <option value="legs">Leg day</option>
+                <option value="upper">Vrch tela</option>
+                <option value="other">Ine / mobilita</option>
+                <option value="full" selected>Cely plan</option>
+              </select>
+            </label>
+            <label>
+              Cas
+              <select id="duration">
+                <option value="25">25 min</option>
+                <option value="40">40 min</option>
+                <option value="60" selected>60 min</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="control-row">
+            <label>
+              Faza
+              <select id="phase">
+                <option value="base">Zaklad / zima</option>
+                <option value="build">Budovanie</option>
+                <option value="race">Sutazne obdobie</option>
+                <option value="recovery">Regeneracia</option>
+              </select>
+            </label>
+            <label>
+              Narocnost
+              <select id="level">
+                <option value="easy">Lahka</option>
+                <option value="normal" selected>Normal</option>
+                <option value="hard">Tazsia</option>
+              </select>
+            </label>
+          </div>
+
+          <button type="button" class="primary" id="generatePlan">Vytvorit plan</button>
+          <button type="button" id="savePlan">Ulozit plan</button>
+          <div class="notice" id="notice" role="status"></div>
+
+          <h2 class="panel-title">Vlastny cvik</h2>
+          <form id="exerciseForm" autocomplete="off">
+            <label>
+              Nazov cviku
+              <input id="exerciseName" placeholder="napr. Copenhagen plank">
+            </label>
+            <div class="control-row">
+              <label>
+                Sport
+                <input id="exerciseSport" placeholder="cycling / football / vlastny">
+              </label>
+              <label>
+                Blok
+                <select id="exerciseCategory">
+                  <option value="core">Core</option>
+                  <option value="legs">Leg day</option>
+                  <option value="upper">Vrch tela</option>
+                  <option value="other">Ine</option>
+                  <option value="full">Cely plan</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              Poznamka
+              <textarea id="exerciseNote" placeholder="technika, opakovania, pozor na..."></textarea>
+            </label>
+            <button type="submit">Pridat cvik</button>
+          </form>
+        </div>
+      </aside>
+
+      <section class="stack">
+        <article class="panel">
+          <div class="panel-inner stack">
+            <h2 class="panel-title">Plan</h2>
+            <div class="plan-list" id="planBox"></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-inner stack">
+            <h2 class="panel-title">Ulozene plany</h2>
+            <div class="plan-list" id="savedPlans"></div>
+            <div class="empty" id="emptyPlans">Zatial nemas ulozeny plan.</div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-inner stack">
+            <h2 class="panel-title">Cviky v databaze</h2>
+            <div class="exercise-list" id="exerciseList"></div>
+          </div>
+        </article>
+      </section>
+    </section>
+  </main>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script>
+    const GYM_KEY = 'flegma_tabulky_gym_v1';
+    const DEFAULT_EXERCISES = [
+      ex('cycling', 'core', 'Dead bug', '3x8/strana, pomaly, pevny trup'),
+      ex('cycling', 'core', 'Side plank', '3x30-45 s/strana'),
+      ex('cycling', 'core', 'Pallof press', '3x10/strana'),
+      ex('cycling', 'legs', 'Bulharsky drep', '3x6-10/strana'),
+      ex('cycling', 'legs', 'Rumunsky mrtvy tah', '3x6-8'),
+      ex('cycling', 'legs', 'Step-up', '3x8/strana'),
+      ex('cycling', 'upper', 'Prítahy v predklone', '3x8-10'),
+      ex('cycling', 'upper', 'Kliky', '3x8-15'),
+      ex('cycling', 'other', 'Mobilita bedier', '8-10 min'),
+      ex('cycling', 'core', 'Plank s posunom kolien', '3x8/strana, panva sa nehybe'),
+      ex('cycling', 'core', 'Farmer carry', '4x30-40 m, tazke ale rovny chrbat'),
+      ex('cycling', 'legs', 'Leg press', '3x8-10, kolena idu v smere spiciek'),
+      ex('cycling', 'legs', 'Hip thrust', '3x8-12, stlac zadok hore'),
+      ex('cycling', 'upper', 'Face pull', '3x12-15, lopatky dozadu'),
+      ex('cycling', 'other', 'Otvaranie hrudnika o stenu', '2x60 s/strana'),
+      ex('triathlon', 'core', 'Dead bug', '3x8/strana, zaklad pre beh aj bike'),
+      ex('triathlon', 'core', 'Side plank s dvihnutou nohou', '3x20-30 s/strana'),
+      ex('triathlon', 'core', 'Pallof press', '3x10/strana, antirotacia'),
+      ex('triathlon', 'core', 'Hollow hold', '4x20-30 s, plavecky trup'),
+      ex('triathlon', 'legs', 'Bulharsky drep', '3x6-10/strana, sila jednej nohy'),
+      ex('triathlon', 'legs', 'Rumunsky mrtvy tah', '3x6-8, hamstringy a zadok'),
+      ex('triathlon', 'legs', 'Step-up', '3x8/strana, kontrola kolena'),
+      ex('triathlon', 'legs', 'Lytka v stoji', '4x12-15, beh a achilovky'),
+      ex('triathlon', 'upper', 'Lat pulldown / zhyb', '3x6-10, plavecky tah'),
+      ex('triathlon', 'upper', 'Face pull', '3x12-15, ramena bez bolesti'),
+      ex('triathlon', 'upper', 'Kliky', '3x8-15, pevny trup'),
+      ex('triathlon', 'upper', 'External rotation', '3x12/strana, rotatory ramena'),
+      ex('triathlon', 'other', 'Mobilita clenku', '6-8 min'),
+      ex('triathlon', 'other', 'Mobilita bedier 90/90', '2x60 s/strana'),
+      ex('triathlon', 'other', 'Mobilita hrudnej chrbtice', '2x8/strana'),
+      ex('triathlon', 'other', 'Dychanie v lahu', '3 min, ukludnit nervovy system'),
+      ex('football', 'core', 'Anti-rotacia s gumou', '3x10/strana'),
+      ex('football', 'legs', 'Nordic hamstring', '3x4-6'),
+      ex('football', 'legs', 'Vyrazy do strany', '3x8/strana'),
+      ex('football', 'upper', 'Landmine press', '3x8/strana'),
+      ex('football', 'other', 'Adduktory Copenhagen', '3x20-30 s/strana'),
+      ex('football', 'core', 'Plank s dotykom ramien', '3x10/strana'),
+      ex('football', 'legs', 'Trap bar deadlift', '3x5-6, silovy zaklad'),
+      ex('football', 'legs', 'Split squat', '3x8/strana'),
+      ex('football', 'legs', 'Hamstring slide', '3x8-12'),
+      ex('football', 'upper', 'Tlaky jednoruciek', '3x8-10'),
+      ex('football', 'other', 'Mobilita adduktorov', '6-8 min'),
+      ex('run', 'core', 'Bird dog', '3x8/strana'),
+      ex('run', 'legs', 'Single-leg RDL', '3x8/strana'),
+      ex('run', 'legs', 'Lytka v stoji', '4x12-15'),
+      ex('run', 'upper', 'Prítahy gumy', '3x15'),
+      ex('run', 'other', 'Mobilita clenku', '6-8 min'),
+      ex('run', 'core', 'Suitcase carry', '4x25-35 m/strana'),
+      ex('run', 'legs', 'Reverse lunge', '3x8/strana'),
+      ex('run', 'legs', 'Tibialis raises', '3x15-20'),
+      ex('run', 'legs', 'Hip airplane', '2x5/strana, kontrola panvy'),
+      ex('run', 'upper', 'Kliky o lavicku', '3x10-15'),
+      ex('run', 'other', 'Chodidlo short-foot', '3x8/strana'),
+      ex('swim', 'core', 'Hollow hold', '4x20-30 s'),
+      ex('swim', 'upper', 'Lat pulldown / zhyb', '3x6-10'),
+      ex('swim', 'upper', 'External rotation', '3x12/strana'),
+      ex('swim', 'legs', 'Goblet squat', '3x8-10'),
+      ex('swim', 'other', 'Mobilita ramien', '8-10 min'),
+      ex('swim', 'core', 'Cable chop', '3x10/strana'),
+      ex('swim', 'upper', 'Straight-arm pulldown', '3x10-12'),
+      ex('swim', 'upper', 'Scapular push-up', '3x10-12'),
+      ex('swim', 'upper', 'Y-T-W zdvihy', '2x8 kazda pozicia'),
+      ex('swim', 'legs', 'Split squat', '3x8/strana'),
+      ex('swim', 'other', 'Thoracic rotation', '2x8/strana'),
+      ex('general', 'core', 'McGill curl-up', '3x8, bez tahania krku'),
+      ex('general', 'core', 'Plank', '3x30-60 s'),
+      ex('general', 'legs', 'Drep s vlastnou vahou', '3x10-15'),
+      ex('general', 'legs', 'Goblet squat', '3x8-10'),
+      ex('general', 'legs', 'Mrtvy tah s kettlebellom', '3x8'),
+      ex('general', 'upper', 'Prítahy kladky', '3x10'),
+      ex('general', 'upper', 'Tlaky jednoruciek', '3x8-10'),
+      ex('general', 'other', 'Lahka mobilita cele telo', '8-12 min')
+    ];
+
+    const state = loadGym();
+    let currentPlan = null;
+
+    const sport = document.getElementById('sport');
+    const customSport = document.getElementById('customSport');
+    const category = document.getElementById('category');
+    const duration = document.getElementById('duration');
+    const phase = document.getElementById('phase');
+    const level = document.getElementById('level');
+    const planBox = document.getElementById('planBox');
+    const savedPlans = document.getElementById('savedPlans');
+    const emptyPlans = document.getElementById('emptyPlans');
+    const exerciseList = document.getElementById('exerciseList');
+    const notice = document.getElementById('notice');
+
+    document.getElementById('generatePlan').addEventListener('click', generatePlan);
+    document.getElementById('savePlan').addEventListener('click', saveCurrentPlan);
+    document.getElementById('exerciseForm').addEventListener('submit', addExercise);
+    [sport, customSport, category, duration, phase, level].forEach((input) => input.addEventListener('input', generatePlan));
+
+    generatePlan();
+    render();
+
+    function generatePlan() {
+      const selectedSport = currentSport();
+      const selectedCategory = category.value;
+      const minutes = Number(duration.value);
+      const exerciseCount = minutes >= 60 ? 6 : minutes >= 40 ? 5 : 4;
+      const exercises = pickExercises(selectedSport, selectedCategory, exerciseCount);
+      const volume = volumeText(level.value, phase.value);
+      const rpe = rpeText(phase.value, level.value);
+      currentPlan = {
+        id: crypto.randomUUID(),
+        sport: selectedSport,
+        category: selectedCategory,
+        duration: minutes,
+        phase: phase.value,
+        level: level.value,
+        rpe,
+        exercises,
+        createdAt: new Date().toISOString()
+      };
+      planBox.innerHTML = planHtml(currentPlan, volume, rpe);
+    }
+
+    function pickExercises(selectedSport, selectedCategory, count) {
+      if (selectedCategory === 'full') {
+        const order = ['core', 'legs', 'upper', 'legs', 'upper', 'other'];
+        return order.slice(0, count).map((categoryName, index) => {
+          const pool = exercisePool(selectedSport, categoryName);
+          return pool[index % pool.length];
+        }).filter(Boolean);
+      }
+      return exercisePool(selectedSport, selectedCategory).slice(0, count);
+    }
+
+    function exercisePool(selectedSport, selectedCategory) {
+      const exact = state.exercises.filter((item) => item.category === selectedCategory && item.sport === selectedSport);
+      const current = state.exercises.filter((item) => item.category === selectedCategory && item.sport === sport.value);
+      const general = state.exercises.filter((item) => item.category === selectedCategory && item.sport === 'general');
+      const fallback = state.exercises.filter((item) => item.category === selectedCategory);
+      return [...exact, ...current, ...general, ...fallback].filter((item, index, array) => {
+        return array.findIndex((entry) => entry.name === item.name && entry.category === item.category) === index;
+      });
+    }
+
+    function saveCurrentPlan() {
+      if (!currentPlan) generatePlan();
+      state.plans.unshift({ ...currentPlan, id: crypto.randomUUID(), savedAt: new Date().toISOString() });
+      saveGym();
+      showNotice('Plan ulozeny.');
+      render();
+    }
+
+    function addExercise(event) {
+      event.preventDefault();
+      const name = document.getElementById('exerciseName').value.trim();
+      if (!name) {
+        showNotice('Zadaj nazov cviku.');
+        return;
+      }
+      state.exercises.unshift({
+        id: crypto.randomUUID(),
+        sport: document.getElementById('exerciseSport').value.trim() || currentSport(),
+        category: document.getElementById('exerciseCategory').value,
+        name,
+        note: document.getElementById('exerciseNote').value.trim(),
+        custom: true
+      });
+      event.target.reset();
+      saveGym();
+      showNotice('Cvik pridany.');
+      generatePlan();
+      render();
+    }
+
+    function deletePlan(id) {
+      state.plans = state.plans.filter((item) => item.id !== id);
+      saveGym();
+      render();
+    }
+
+    function deleteExercise(id) {
+      const exercise = state.exercises.find((item) => item.id === id);
+      if (!exercise || !exercise.custom) return;
+      state.exercises = state.exercises.filter((item) => item.id !== id);
+      saveGym();
+      generatePlan();
+      render();
+    }
+
+    function render() {
+      savedPlans.innerHTML = state.plans.map((plan) => `
+        <article class="plan-card">
+          <h3>${escapeHtml(labelSport(plan.sport))} - ${labelCategory(plan.category)}</h3>
+          <div class="tag-row">
+            <span class="tag">${plan.duration} min</span>
+            <span class="tag">${labelPhase(plan.phase)}</span>
+            <span class="tag">${labelLevel(plan.level)}</span>
+          </div>
+          <div class="tag-row"><span class="tag">RPE ${escapeHtml(plan.rpe || rpeText(plan.phase, plan.level))}</span></div>
+          <ol class="plan-steps">${plan.exercises.map((item) => `<li>${escapeHtml(item.name)} - ${escapeHtml(item.note)}</li>`).join('')}</ol>
+          <button type="button" class="danger" onclick="deletePlan('${plan.id}')">Vymazat</button>
+        </article>
+      `).join('');
+      emptyPlans.hidden = Boolean(state.plans.length);
+
+      exerciseList.innerHTML = state.exercises.map((item) => `
+        <article class="exercise-card">
+          <h3>${escapeHtml(item.name)}</h3>
+          <div class="tag-row">
+            <span class="tag">${escapeHtml(labelSport(item.sport))}</span>
+            <span class="tag">${labelCategory(item.category)}</span>
+            ${item.custom ? '<span class="tag">vlastny</span>' : ''}
+          </div>
+          <span class="muted">${escapeHtml(item.note)}</span>
+          ${item.custom ? `<button type="button" class="danger" onclick="deleteExercise('${item.id}')">Vymazat cvik</button>` : ''}
+        </article>
+      `).join('');
+    }
+
+    function planHtml(plan, volume, rpe) {
+      const advice = trainerAdvice(plan);
+      return `
+        <article class="plan-card">
+          <h3>${escapeHtml(labelSport(plan.sport))} - ${labelCategory(plan.category)}</h3>
+          <div class="tag-row">
+            <span class="tag">${plan.duration} min</span>
+            <span class="tag">${labelPhase(plan.phase)}</span>
+            <span class="tag">${labelLevel(plan.level)}</span>
+            <span class="tag">RPE ${escapeHtml(rpe)}</span>
+          </div>
+          <p class="muted">${advice}</p>
+          <div class="exercise-card">
+            <h3>Ako to odcvicit</h3>
+            <span class="muted">Najprv technika, potom vaha. Ked nevies ci je cvik spravny, zober lahsie zavazie. Posledne opakovania maju byt tazke, ale stale ciste. Ak sa rozpada chrbat, koleno alebo rameno, seria konci.</span>
+          </div>
+          <ol class="plan-steps">
+            <li>Rozohriatie 6-10 min: mobilita + lahke serie.</li>
+            ${plan.exercises.map((item) => `<li>${escapeHtml(item.name)} - ${escapeHtml(item.note)} - ${volume}</li>`).join('')}
+            <li>Pauzy: tazke cviky 90-150 s, doplnkove cviky 45-75 s.</li>
+            <li>Zaver 5 min: dychanie, lahka mobilita, zapis pocitu.</li>
+          </ol>
+        </article>
+      `;
+    }
+
+    function trainerAdvice(plan) {
+      if (plan.sport === 'triathlon' && plan.category === 'full') return 'Triatlon potrebuje silne nohy, pevny trup, zdrave ramena a mobilitu. Toto je cely 60 min plan bez zbytocneho kulturistickeho znicenia.';
+      if (plan.sport === 'triathlon' && plan.category === 'legs') return 'Triatlonove nohy maju byt silne a odolne, ale nesmu rozbit beh ani bicykel na dalsi den.';
+      if (plan.sport === 'triathlon' && plan.category === 'upper') return 'Vrch tela rob pre plavanie: lopatky, tah, rotatory ramien a stabilny trup.';
+      if (plan.sport === 'triathlon' && plan.category === 'core') return 'Core pre triatlon drzi panvu pri behu, aero posed na bicykli a rotaciu pri plavani.';
+      if (plan.sport === 'cycling' && plan.category === 'legs') return 'Pre cyklistiku drz kvalitu pohybu, nechod do zlyhania pred tazkym vyjazdom.';
+      if (plan.sport === 'cycling' && plan.category === 'core') return 'Core ma stabilizovat panvu na bicykli, nie znicit brusaky.';
+      if (plan.sport === 'football') return 'Futbal potrebuje hamstringy, adduktory, zmeny smeru a prevenciu zraneni.';
+      if (plan.sport === 'run') return 'Beh potrebuje jednostrannu stabilitu, lytka, chodidla a kontrolu panvy.';
+      if (plan.sport === 'swim') return 'Plavanie potrebuje ramena bez bolesti, lopatky, rotaciu a pevny trup.';
+      return 'Vlastny sport: zacni konzervativne, zapis reakciu tela a uprav objem po 2-3 treningoch.';
+    }
+
+    function currentSport() {
+      return sport.value === 'custom' ? (customSport.value.trim() || 'custom') : sport.value;
+    }
+
+    function volumeText(selectedLevel, selectedPhase) {
+      const base = {
+        easy: '2-3 serie po 8-12 opakovani, nechaj 3-4 opakovania v rezerve',
+        normal: '3 serie po 6-10 opakovani, nechaj 2-3 opakovania v rezerve',
+        hard: '3-4 serie po 4-8 opakovani, nechaj 1-2 opakovania v rezerve'
+      }[selectedLevel];
+      if (selectedPhase === 'race') return `${base}, ziadne zlyhanie, ziadna svalovica`;
+      if (selectedPhase === 'recovery') return '1-2 lahke serie po 8-12 opakovani, ciel je pohyb a regeneracia';
+      return base;
+    }
+
+    function rpeText(selectedPhase, selectedLevel) {
+      if (selectedPhase === 'recovery') return '4-5';
+      if (selectedPhase === 'race') return selectedLevel === 'hard' ? '6-7' : '5-6';
+      if (selectedPhase === 'base') return { easy: '5-6', normal: '6-7', hard: '7-8' }[selectedLevel];
+      return { easy: '6', normal: '7-8', hard: '8' }[selectedLevel];
+    }
+
+    function loadGym() {
+      try {
+        const raw = localStorage.getItem(GYM_KEY);
+        const saved = raw ? JSON.parse(raw) : {};
+        return {
+          exercises: mergeExercises(saved.exercises || []),
+          plans: saved.plans || []
+        };
+      } catch {
+        return { exercises: DEFAULT_EXERCISES, plans: [] };
+      }
+    }
+
+    function mergeExercises(exercises) {
+      const names = new Set(exercises.map((item) => `${item.sport}:${item.category}:${item.name}`.toLowerCase()));
+      const missing = DEFAULT_EXERCISES.filter((item) => !names.has(`${item.sport}:${item.category}:${item.name}`.toLowerCase()));
+      return [...exercises, ...missing];
+    }
+
+    function saveGym() {
+      localStorage.setItem(GYM_KEY, JSON.stringify(state));
+    }
+
+    function ex(sportValue, categoryValue, name, note) {
+      return { id: `seed-${sportValue}-${categoryValue}-${name.toLowerCase().replaceAll(' ', '-')}`, sport: sportValue, category: categoryValue, name, note, custom: false };
+    }
+
+    function labelSport(value) {
+      return { cycling: 'Cyklistika', triathlon: 'Triathlon', football: 'Futbal', run: 'Beh', swim: 'Plavanie', general: 'Vseobecne', custom: 'Vlastny sport' }[value] || value;
+    }
+
+    function labelCategory(value) {
+      return { core: 'Core', legs: 'Leg day', upper: 'Vrch tela', other: 'Ine', full: 'Cely plan' }[value] || value;
+    }
+
+    function labelPhase(value) {
+      return { base: 'Zaklad', build: 'Budovanie', race: 'Sutazne obdobie', recovery: 'Regeneracia' }[value] || value;
+    }
+
+    function labelLevel(value) {
+      return { easy: 'Lahka', normal: 'Normal', hard: 'Tazsia' }[value] || value;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function showNotice(message) {
+      notice.textContent = message;
+      notice.classList.add('is-visible');
+      window.clearTimeout(showNotice.timeout);
+      showNotice.timeout = window.setTimeout(() => notice.classList.remove('is-visible'), 2500);
+    }
+  </script>
+</body>
+</html>

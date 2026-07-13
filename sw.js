@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v25-carbload-function-20260713';
+const CACHE_NAME = 'flegma-tabulky-v27-gym-triathlon-rpe-20260713';
 const APP_SHELL = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const APP_SHELL = [
   './diary.html',
   './calendar.html',
   './checkin.html',
+  './gym.html',
   './training.html',
   './fit-import.html',
   './foods.html',
