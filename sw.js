@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v36-missing-macros-20260713';
+const CACHE_NAME = 'flegma-tabulky-v37-missing-macros-20260713';
 const APP_SHELL = [
   './',
   './index.html',
