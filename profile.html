@@ -417,10 +417,19 @@
 
             <div class="grid-2">
               <label>
+                Cielovy pas cm
+                <input id="targetWaist" type="number" min="40" max="200" step="0.1" inputmode="decimal">
+              </label>
+              <div></div>
+            </div>
+
+            <div class="grid-2">
+              <label>
                 Ciel
                 <select id="goal">
                   <option value="fit">Fit / udrzat</option>
                   <option value="lose">Schudnut</option>
+                  <option value="waist">Redukcia pasa / tuku</option>
                   <option value="gain">Pribrat</option>
                   <option value="carbload">Cyklo sutaz / carbload</option>
                 </select>
@@ -499,7 +508,7 @@
   <script src="wellness.js"></script>
   <script>
     const STORAGE_KEY = 'flegma_tabulky_profile_v1';
-    const fields = ['birthYear', 'sex', 'height', 'weight', 'targetWeight', 'waist', 'goal', 'activity', 'trainingHours', 'temperFlegma', 'temperMelan', 'temperCholerik', 'temperSangvinik'];
+    const fields = ['birthYear', 'sex', 'height', 'weight', 'targetWeight', 'waist', 'targetWaist', 'goal', 'activity', 'trainingHours', 'temperFlegma', 'temperMelan', 'temperCholerik', 'temperSangvinik'];
 
     const profileForm = document.getElementById('profileForm');
     const analysisGrid = document.getElementById('analysisGrid');
@@ -548,6 +557,7 @@
         weight: readNumber('weight'),
         targetWeight: readNumber('targetWeight'),
         waist: readNumber('waist'),
+        targetWaist: readNumber('targetWaist'),
         goal: value('goal'),
         activity: readNumber('activity'),
         trainingHours: readNumber('trainingHours'),
@@ -572,6 +582,7 @@
         weight: 80,
         targetWeight: 75,
         waist: 90,
+        targetWaist: 84,
         goal: 'fit',
         activity: 1.55,
         trainingHours: 5,
@@ -606,19 +617,22 @@
       const bmi = profile.height > 0 ? profile.weight / ((profile.height / 100) ** 2) : 0;
       const bmr = calculateBmr(profile, age);
       const tdee = bmr * (profile.activity || 1.2);
-      const targetCalories = calculateTargetCalories(tdee, profile.goal);
+      const targetCalories = calculateTargetCalories(tdee, profile);
       const protein = profile.weight * proteinMultiplier(profile.goal);
       const carbs = carbRange(profile);
       const fat = Math.max(35, profile.weight * 0.8);
       const weightDelta = calculateWeightDelta(profile);
+      const waistDelta = calculateWaistDelta(profile);
       const body = window.FlegmaWellness ? FlegmaWellness.bodyComposition(profile) : { bodyFat: 0, fatMass: 0, leanMass: 0, waistHeightRatio: 0, band: '-' };
-      latestAnalysis = { profile, age, bmi, bmr, tdee, targetCalories, protein, carbs, fat, weightDelta };
+      latestAnalysis = { profile, age, bmi, bmr, tdee, targetCalories, protein, carbs, fat, weightDelta, waistDelta };
 
       analysisGrid.innerHTML = `
         ${metric('Vek', age ? `${age} r.` : '-', 'age')}
         ${metric('BMI', bmi ? formatNumber(bmi) : '-', 'bmi')}
         ${metric('Cielova vaha', profile.targetWeight ? `${formatNumber(profile.targetWeight)} kg` : '-', 'targetWeight')}
         ${metric('Rozdiel vahy', weightDelta !== null ? `${formatNumber(weightDelta)} kg` : '-', 'weightDelta')}
+        ${metric('Cielovy pas', profile.targetWaist ? `${formatNumber(profile.targetWaist)} cm` : '-', 'waist')}
+        ${metric('Rozdiel pasa', waistDelta !== null ? `${formatNumber(waistDelta)} cm` : '-', 'waist')}
         ${metric('Pas/vyska', body.waistHeightRatio ? formatNumber(body.waistHeightRatio) : '-', 'waist')}
         ${metric('Tuk odhad', body.bodyFat ? `${formatNumber(body.bodyFat)} %` : '-', 'bodyFat')}
         ${metric('Tuk kg', body.fatMass ? `${formatNumber(body.fatMass)} kg` : '-', 'bodyFat')}
@@ -642,14 +656,16 @@
       return profile.sex === 'female' ? base - 161 : base + 5;
     }
 
-    function calculateTargetCalories(tdee, goal) {
+    function calculateTargetCalories(tdee, profile) {
       if (!tdee) return 0;
-      if (goal === 'lose') return tdee - 400;
-      if (goal === 'gain') return tdee + 300;
+      if (profile.goal === 'waist' || isWaistReduction(profile)) return tdee - 300;
+      if (profile.goal === 'lose') return tdee - 400;
+      if (profile.goal === 'gain') return tdee + 300;
       return tdee;
     }
 
     function proteinMultiplier(goal) {
+      if (goal === 'waist') return 2.1;
       if (goal === 'lose') return 2;
       if (goal === 'gain') return 1.8;
       return 1.6;
@@ -659,12 +675,14 @@
       const weight = profile.weight || 0;
       if (profile.goal === 'carbload') return { min: weight * 8, max: weight * 10 };
       if ((profile.trainingHours || 0) >= 8) return { min: weight * 5, max: weight * 7 };
+      if (profile.goal === 'waist' || isWaistReduction(profile)) return { min: weight * 2, max: weight * 3.2 };
       if (profile.goal === 'lose') return { min: weight * 2, max: weight * 3 };
       return { min: weight * 3, max: weight * 5 };
     }
 
     function goalTitle(goal) {
       if (goal === 'lose') return 'Rezim: schudnut';
+      if (goal === 'waist') return 'Rezim: redukcia pasa / tuku';
       if (goal === 'gain') return 'Rezim: pribrat';
       if (goal === 'carbload') return 'Rezim: cyklo sutaz / carbload';
       return 'Rezim: fit / udrzat';
@@ -675,15 +693,27 @@
       return profile.weight - profile.targetWeight;
     }
 
+    function calculateWaistDelta(profile) {
+      if (!profile.waist || !profile.targetWaist) return null;
+      return profile.waist - profile.targetWaist;
+    }
+
+    function isWaistReduction(profile) {
+      return Boolean(profile.waist && profile.targetWaist && profile.targetWaist < profile.waist);
+    }
+
     function goalText(profile, calories, carbs, fat) {
       const goal = profile.goal;
       const kcalText = calories ? `Startuj okolo ${formatNumber(calories)} kcal denne.` : 'Dopln vysku, vahu a rok narodenia pre kcal ciel.';
       const carbText = carbs.min ? `Sacharidy orientacne ${formatNumber(carbs.min)}-${formatNumber(carbs.max)} g denne.` : '';
       const fatText = fat ? `Tuky aspon okolo ${formatNumber(fat)} g denne.` : '';
       const delta = calculateWeightDelta(profile);
+      const waistDelta = calculateWaistDelta(profile);
       const weightText = delta === null ? '' : delta > 0 ? `Do ciela ostava schudnut cca ${formatNumber(delta)} kg.` : delta < 0 ? `Do ciela ostava pribrat cca ${formatNumber(Math.abs(delta))} kg.` : 'Si na cielovej vahe.';
+      const waistText = waistDelta === null ? '' : waistDelta > 0 ? `Do cieloveho pasa ostava cca ${formatNumber(waistDelta)} cm.` : waistDelta < 0 ? `Pas je uz pod cielom o ${formatNumber(Math.abs(waistDelta))} cm.` : 'Pas je na cieli.';
       if (goal === 'carbload') return `${kcalText} Pri carbloade drz sacharidy vysoko, vlakninu a tazke tuky skor nizsie. ${carbText}`;
-      return `${kcalText} ${weightText} ${carbText} ${fatText}`;
+      if (goal === 'waist' || isWaistReduction(profile)) return `${kcalText} ${waistText} Drz protein vyssie, tuky kontrolovane a sacharidy presuvaj hlavne okolo treningu. ${carbText}`;
+      return `${kcalText} ${weightText} ${waistText} ${carbText} ${fatText}`;
     }
 
     function metric(label, value, infoKey) {
@@ -716,7 +746,7 @@
       const body = window.FlegmaWellness ? FlegmaWellness.bodyComposition(profile) : { band: '-', waistHeightRatio: 0, bodyFat: 0, fatMass: 0, leanMass: 0 };
       const proteinPerKg = proteinMultiplier(profile.goal);
       const activityLabel = activityText(profile.activity);
-      const goalKcalText = profile.goal === 'lose' ? 'TDEE - 400 kcal pre chudnutie.' : profile.goal === 'gain' ? 'TDEE + 300 kcal pre priberanie.' : 'Pri udrzani je ciel blizko TDEE.';
+      const goalKcalText = profile.goal === 'waist' || isWaistReduction(profile) ? 'TDEE - 300 kcal pre redukciu pasa bez zbytocne tvrdeho deficitu.' : profile.goal === 'lose' ? 'TDEE - 400 kcal pre chudnutie.' : profile.goal === 'gain' ? 'TDEE + 300 kcal pre priberanie.' : 'Pri udrzani je ciel blizko TDEE.';
       const info = {
         age: {
           title: 'Vek',
@@ -750,6 +780,8 @@
           body: 'Pas je prakticky signal zmien tuku v strede tela. Pomer pas/vyska je casto uzitocnejsi ako samotne BMI.',
           items: [
             `Pas: ${profile.waist ? `${formatNumber(profile.waist)} cm` : '-'}`,
+            `Cielovy pas: ${profile.targetWaist ? `${formatNumber(profile.targetWaist)} cm` : '-'}`,
+            `Rozdiel do ciela: ${calculateWaistDelta(profile) !== null ? `${formatNumber(calculateWaistDelta(profile))} cm` : '-'}`,
             `Pas/vyska: ${body.waistHeightRatio ? formatNumber(body.waistHeightRatio) : '-'}`,
             `Pasmo: ${body.band}`,
             'Pod 0,5 je orientacne OK, 0,5 az 0,6 zvysene riziko, nad 0,6 vysoke riziko.'
@@ -800,7 +832,7 @@
           items: [
             `Aktualne: ${data.protein ? `${formatNumber(data.protein)} g denne` : '-'}`,
             `Vzorec v appke: ${formatNumber(proteinPerKg)} g na kg aktualnej vahy.`,
-            'Pri chudnuti appka dava viac proteinu, aby si menej hladoval a menej stracal svaly.',
+            'Pri chudnuti alebo redukcii pasa appka dava viac proteinu, aby si menej hladoval a menej stracal svaly.',
             'Pri priberani je ciel stale vysoky, ale deficit ochrany svalov nie je taky kriticky.'
           ]
         }

@@ -219,7 +219,7 @@
     const avgLast = average(last7);
     const avgPrev = average(prev7);
     const sportsEnabled = loadTrainings().some((training) => training.date >= addDays(date, -6) && training.date <= date);
-    if (avgLast && avgPrev && avgPrev - avgLast > avgPrev * 0.01 && (profile.goal !== 'lose' || sportsEnabled)) {
+    if (avgLast && avgPrev && avgPrev - avgLast > avgPrev * 0.01 && (!['lose', 'waist'].includes(profile.goal) || sportsEnabled)) {
       messages.push({ level: 'warn', text: 'Hmotnost klesla o viac ako 1 % za tyzden. Pri treningu to moze znamenat nizky prijem energie.' });
     }
 

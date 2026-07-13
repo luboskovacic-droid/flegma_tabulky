@@ -869,7 +869,7 @@
     function saveWater(event) {
       event.preventDefault();
       if (!window.FlegmaWellness) return;
-      const water = readNumber('waterInput');
+      const water = readNumber(document.getElementById('waterInput').value);
       FlegmaWellness.upsertCheckin(state.date, { waterMl: water });
       showNotice('Hydratacia ulozena.');
       render();
@@ -908,6 +908,11 @@
         message += ` Carbload ${carbload.label}: ${carbload.percent}% z 3-dnoveho planu, intenzita ${carbload.intensity}. ${temperamentText(temperament)} Vysoko drz sacharidy celkovo, cukry kontrolovane; vacsina nech ide z ryze, cestovin, zemiakov alebo peciva.`;
       } else if (profile.goal === 'carbload') {
         message += ` V profile mas carbload, ale v kalendari nie je trening/sutaz v 3-dnovom okne, preto nepocitam vysoky carbload ciel.`;
+      }
+
+      if (!isCarbload && isWaistReduction(profile)) {
+        const waistDelta = profile.waist && profile.targetWaist ? profile.waist - profile.targetWaist : 0;
+        message += ` Redukcia pasa: ciel je zhodit cca ${formatNumber(Math.max(0, waistDelta))} cm z pasa. Drz mierny deficit, protein vysoko, sladke a tuky vecer neprestreluj.`;
       }
 
       if (missingCarbs > 0) {
@@ -967,14 +972,15 @@
         carbs += (Number(training.carbsPerHour || 0) * (Number(training.plannedMinutes || 0) / 60)) * 0.5;
       }
 
+      if (isWaistReduction(profile) && !isCarbload) carbs *= training ? 0.9 : 0.78;
       if (profile.goal === 'lose' && !isCarbload) carbs *= 0.85;
       if (profile.goal === 'gain' && !isCarbload) carbs *= 1.15;
 
-      const protein = weight * multipliers.protein;
-      const fat = weight * multipliers.fat;
+      const protein = weight * (isWaistReduction(profile) && !isCarbload ? Math.max(multipliers.protein, 2.1) : multipliers.protein);
+      const fat = weight * (isWaistReduction(profile) && !isCarbload ? Math.min(multipliers.fat, 0.75) : multipliers.fat);
       const sugar = isCarbload
         ? carbloadSugarLimit(weight, carbload, training)
-        : Math.max(30, weight * multipliers.sugar);
+        : Math.max(25, weight * (isWaistReduction(profile) ? Math.min(multipliers.sugar, 0.55) : multipliers.sugar));
       const fiber = Math.max(isCarbload ? 16 : 22, Math.min(isCarbload ? 25 : 40, weight * multipliers.fiber));
       const kcal = estimateTargetKcal(profile, carbs, protein, fat);
 
@@ -1078,12 +1084,18 @@
       const base = (10 * weight) + (6.25 * height) - (5 * age) + (profile.sex === 'female' ? -161 : 5);
       const tdee = base * (profile.activity || 1.55);
       const macroKcal = targetFat === null ? 0 : (targetCarbs * 4) + (targetProtein * 4) + (targetFat * 9);
+      if (isWaistReduction(profile)) return Math.max(1500, tdee - 300);
       if (profile.goal === 'lose') return tdee - 400;
       if (profile.goal === 'gain') return tdee + 300;
       return Math.max(tdee, macroKcal);
     }
 
+    function isWaistReduction(profile) {
+      return profile.goal === 'waist' || Boolean(profile.waist && profile.targetWaist && profile.targetWaist < profile.waist);
+    }
+
     function proteinMultiplier(goal) {
+      if (goal === 'waist') return 2.1;
       if (goal === 'lose') return 2;
       if (goal === 'gain') return 1.8;
       return 1.6;
@@ -1201,6 +1213,7 @@
 
     function dailyCarbTarget(profile) {
       const weight = profile.weight || 80;
+      if (isWaistReduction(profile)) return weight * 2.4;
       if (profile.goal === 'lose') return weight * 2.5;
       if (profile.goal === 'gain') return weight * 5;
       return weight * 4;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v20-slovak-food-seeds-20260713';
+const CACHE_NAME = 'flegma-tabulky-v22-water-save-fix-20260713';
 const APP_SHELL = [
   './',
   './index.html',
