@@ -213,6 +213,70 @@ body > main:not(.app) {
   gap: 8px;
 }
 
+.mode-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.today-focus,
+.beginner-card {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 16px;
+  border: 2px solid #087443;
+  border-radius: var(--radius);
+  background: #e9f8ef;
+  color: #073b18;
+  box-shadow: var(--shadow);
+}
+
+.today-focus h2,
+.beginner-card h2,
+.beginner-card h3 {
+  margin: 0;
+  color: #073b18;
+  font-weight: 950;
+}
+
+.today-focus p,
+.beginner-card p {
+  color: #164a28 !important;
+}
+
+.today-focus ol,
+.beginner-card ol {
+  margin: 0;
+  padding-left: 22px;
+  color: #05070a;
+  font-weight: 850;
+}
+
+.today-focus li,
+.beginner-card li {
+  margin: 8px 0;
+}
+
+.quick-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr;
+}
+
+.quick-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 2px solid #005fcc;
+  border-radius: 10px;
+  background: #dcebff;
+  color: #002f6c;
+  font-weight: 950;
+  text-decoration: none;
+}
+
 .notice-text {
   margin: 0 0 12px;
   padding: 10px;
@@ -507,8 +571,13 @@ tr:hover td {
   }
 
   .settings-actions,
-  .preset-row {
+  .preset-row,
+  .quick-actions {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .app-shell {

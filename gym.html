@@ -69,6 +69,68 @@
       margin: 6px 0;
     }
 
+    .workout-card {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 2px solid #005fcc;
+      border-radius: 10px;
+      background: #f4f9ff;
+    }
+
+    .workout-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .timer {
+      padding: 10px;
+      border: 2px solid #116329;
+      border-radius: 10px;
+      background: #e8f8ee;
+      color: #073b18;
+      font-size: 22px;
+      font-weight: 950;
+      text-align: center;
+    }
+
+    .workout-exercise {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 2px solid #9aa8b8;
+      border-radius: 10px;
+      background: #fff;
+    }
+
+    .workout-exercise.is-done {
+      border-color: #116329;
+      background: #eefaf2;
+    }
+
+    .workout-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 110px;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 950;
+      color: #05070a;
+    }
+
+    .check-row input {
+      width: 24px;
+      height: 24px;
+      flex: 0 0 auto;
+    }
+
     @media (min-width: 900px) {
       .gym-layout {
         grid-template-columns: 390px minmax(0, 1fr);
@@ -225,6 +287,14 @@
 
         <article class="panel">
           <div class="panel-inner stack">
+            <h2 class="panel-title">Start fitka</h2>
+            <div class="plan-list" id="activeWorkout"></div>
+            <div class="empty" id="emptyWorkout">Spusti aktualny alebo ulozeny plan.</div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-inner stack">
             <h2 class="panel-title">Ulozene plany</h2>
             <div class="plan-list" id="savedPlans"></div>
             <div class="empty" id="emptyPlans">Zatial nemas ulozeny plan.</div>
@@ -246,6 +316,7 @@
   <script src="settings.js" defer></script>
   <script>
     const GYM_KEY = 'flegma_tabulky_gym_v1';
+    const SOUND_KEY = 'flegma_tabulky_gym_sound_enabled_v1';
     const DEFAULT_EXERCISES = [
       ex('cycling', 'core', 'Dead bug', '3x8/strana, pomaly, pevny trup'),
       ex('cycling', 'core', 'Side plank', '3x30-45 s/strana'),
@@ -331,18 +402,28 @@
     const phase = document.getElementById('phase');
     const level = document.getElementById('level');
     const planBox = document.getElementById('planBox');
+    const activeWorkout = document.getElementById('activeWorkout');
+    const emptyWorkout = document.getElementById('emptyWorkout');
     const savedPlans = document.getElementById('savedPlans');
     const emptyPlans = document.getElementById('emptyPlans');
     const exerciseList = document.getElementById('exerciseList');
     const notice = document.getElementById('notice');
+    let workoutSession = state.activeSession || null;
+    let restTimer = null;
+    let restEndsAt = 0;
+    let workoutAudioContext = null;
 
     document.getElementById('generatePlan').addEventListener('click', generatePlan);
     document.getElementById('savePlan').addEventListener('click', saveCurrentPlan);
     document.getElementById('exerciseForm').addEventListener('submit', addExercise);
-    [sport, customSport, category, duration, phase, level].forEach((input) => input.addEventListener('input', generatePlan));
+    [sport, customSport, category, duration, phase, level].forEach((input) => {
+      input.addEventListener('input', generatePlan);
+      input.addEventListener('change', generatePlan);
+    });
 
     generatePlan();
     render();
+    renderWorkout();
 
     function generatePlan() {
       const selectedSport = currentSport();
@@ -379,11 +460,10 @@
 
     function exercisePool(selectedSport, selectedCategory) {
       const exact = state.exercises.filter((item) => item.category === selectedCategory && item.sport === selectedSport);
-      const current = state.exercises.filter((item) => item.category === selectedCategory && item.sport === sport.value);
       const general = state.exercises.filter((item) => item.category === selectedCategory && item.sport === 'general');
       const fallback = state.exercises.filter((item) => item.category === selectedCategory);
-      return [...exact, ...current, ...general, ...fallback].filter((item, index, array) => {
-        return array.findIndex((entry) => entry.name === item.name && entry.category === item.category) === index;
+      return [...exact, ...general, ...fallback].filter((item, index, array) => {
+        return array.findIndex((entry) => entry.name === item.name && entry.category === item.category && entry.sport === item.sport) === index;
       });
     }
 
@@ -443,6 +523,7 @@
           </div>
           <div class="tag-row"><span class="tag">RPE ${escapeHtml(plan.rpe || rpeText(plan.phase, plan.level))}</span></div>
           <ol class="plan-steps">${plan.exercises.map((item) => `<li>${escapeHtml(item.name)} - ${escapeHtml(item.note)}</li>`).join('')}</ol>
+          <button type="button" class="primary" onclick="startWorkoutFromPlan('${plan.id}')">Start fitka</button>
           <button type="button" class="danger" onclick="deletePlan('${plan.id}')">Vymazat</button>
         </article>
       `).join('');
@@ -473,19 +554,274 @@
             <span class="tag">${labelLevel(plan.level)}</span>
             <span class="tag">RPE ${escapeHtml(rpe)}</span>
           </div>
+          ${beginnerGymHtml(plan)}
           <p class="muted">${advice}</p>
+          <div class="exercise-card">
+            <h3>${escapeHtml(blockTitle(plan.category))}</h3>
+            <span class="muted">${escapeHtml(blockCoachText(plan.category))}</span>
+          </div>
           <div class="exercise-card">
             <h3>Ako to odcvicit</h3>
             <span class="muted">Najprv technika, potom vaha. Ked nevies ci je cvik spravny, zober lahsie zavazie. Posledne opakovania maju byt tazke, ale stale ciste. Ak sa rozpada chrbat, koleno alebo rameno, seria konci.</span>
           </div>
           <ol class="plan-steps">
             <li>Rozohriatie 6-10 min: mobilita + lahke serie.</li>
-            ${plan.exercises.map((item) => `<li>${escapeHtml(item.name)} - ${escapeHtml(item.note)} - ${volume}</li>`).join('')}
+            ${plan.exercises.map((item) => `<li><strong>${labelCategory(item.category)}:</strong> ${escapeHtml(item.name)} - ${escapeHtml(item.note)} - ${volume}</li>`).join('')}
             <li>Pauzy: tazke cviky 90-150 s, doplnkove cviky 45-75 s.</li>
             <li>Zaver 5 min: dychanie, lahka mobilita, zapis pocitu.</li>
           </ol>
+          <button type="button" class="primary" onclick="startWorkout(currentPlan)">Start fitka</button>
         </article>
       `;
+    }
+
+    function startWorkoutFromPlan(id) {
+      const plan = state.plans.find((item) => item.id === id);
+      if (!plan) return;
+      startWorkout(plan);
+    }
+
+    function startWorkout(plan) {
+      stopRestTimer();
+      workoutSession = {
+        id: crypto.randomUUID(),
+        planId: plan.id,
+        sport: plan.sport,
+        category: plan.category,
+        phase: plan.phase,
+        level: plan.level,
+        rpe: plan.rpe || rpeText(plan.phase, plan.level),
+        startedAt: new Date().toISOString(),
+        exercises: plan.exercises.map((item) => {
+          const previous = lastExerciseHistory(item);
+          return {
+            ...item,
+            done: false,
+            kg: previous ? previous.kg : '',
+            previousKg: previous ? previous.kg : '',
+            previousDate: previous ? previous.date : ''
+          };
+        })
+      };
+      saveGym();
+      renderWorkout();
+      primeWorkoutSound();
+      requestWorkoutNotifications();
+      showNotice('Fitko spustene.');
+    }
+
+    function renderWorkout() {
+      if (!workoutSession) {
+        activeWorkout.innerHTML = '';
+        emptyWorkout.hidden = false;
+        return;
+      }
+      const doneCount = workoutSession.exercises.filter((item) => item.done).length;
+      const totalCount = workoutSession.exercises.length;
+      activeWorkout.innerHTML = `
+        <article class="workout-card">
+          <div class="workout-head">
+            <div>
+              <h3>${escapeHtml(labelSport(workoutSession.sport))} - ${labelCategory(workoutSession.category)}</h3>
+              <div class="tag-row">
+                <span class="tag">${doneCount}/${totalCount} hotovo</span>
+                <span class="tag">RPE ${escapeHtml(workoutSession.rpe)}</span>
+              </div>
+            </div>
+            <button type="button" class="danger" onclick="finishWorkout()">Ukoncit</button>
+          </div>
+          <div id="restTimerBox" class="timer" ${restEndsAt ? '' : 'hidden'}>${timerText()}</div>
+          <div class="stack">
+            ${workoutSession.exercises.map((item, index) => workoutExerciseHtml(item, index)).join('')}
+          </div>
+        </article>
+      `;
+      emptyWorkout.hidden = true;
+    }
+
+    function workoutExerciseHtml(item, index) {
+      const previous = item.previousKg ? `Naposledy: ${formatKg(item.previousKg)} kg${item.previousDate ? ` (${formatDate(item.previousDate)})` : ''}` : 'Zatial bez historie vahy';
+      const rest = restSecondsForExercise(item, item.kg);
+      return `
+        <div class="workout-exercise ${item.done ? 'is-done' : ''}">
+          <label class="check-row">
+            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleWorkoutExercise(${index}, this.checked)">
+            <span>${index + 1}. ${escapeHtml(item.name)}</span>
+          </label>
+          <span class="muted">${escapeHtml(labelCategory(item.category))} - ${escapeHtml(item.note)}</span>
+          <div class="workout-grid">
+            <label>
+              Vaha kg
+              <input type="number" min="0" step="0.5" inputmode="decimal" value="${escapeHtml(item.kg)}" onchange="updateWorkoutKg(${index}, this.value)" oninput="updateWorkoutKg(${index}, this.value)">
+            </label>
+            <div class="tag-row"><span class="tag">${formatRest(rest)}</span></div>
+          </div>
+          <span class="muted">${escapeHtml(previous)}</span>
+        </div>
+      `;
+    }
+
+    function updateWorkoutKg(index, value) {
+      if (!workoutSession || !workoutSession.exercises[index]) return;
+      workoutSession.exercises[index].kg = value;
+      saveGym();
+      const timerBox = document.getElementById('restTimerBox');
+      if (timerBox && !restEndsAt) renderWorkout();
+    }
+
+    function toggleWorkoutExercise(index, checked) {
+      if (!workoutSession || !workoutSession.exercises[index]) return;
+      const item = workoutSession.exercises[index];
+      item.done = checked;
+      item.completedAt = checked ? new Date().toISOString() : '';
+      if (checked) {
+        if (!item.historySaved) {
+          saveExerciseHistory(item);
+          item.historySaved = true;
+        }
+        startRest(restSecondsForExercise(item, item.kg), nextExerciseName(index));
+      } else {
+        stopRestTimer();
+        item.historySaved = false;
+      }
+      saveGym();
+      renderWorkout();
+    }
+
+    function finishWorkout() {
+      stopRestTimer();
+      if (workoutSession) {
+        state.sessions = state.sessions || [];
+        state.sessions.unshift({
+          ...workoutSession,
+          finishedAt: new Date().toISOString()
+        });
+        state.sessions = state.sessions.slice(0, 50);
+      }
+      workoutSession = null;
+      saveGym();
+      renderWorkout();
+      showNotice('Trening ulozeny do historie.');
+    }
+
+    function saveExerciseHistory(item) {
+      const kg = Number(String(item.kg).replace(',', '.')) || 0;
+      if (!kg) return;
+      state.history = state.history || [];
+      state.history.unshift({
+        id: crypto.randomUUID(),
+        key: exerciseHistoryKey(item),
+        name: item.name,
+        category: item.category,
+        sport: item.sport,
+        kg,
+        date: new Date().toISOString()
+      });
+      state.history = state.history.slice(0, 500);
+    }
+
+    function lastExerciseHistory(item) {
+      const key = exerciseHistoryKey(item);
+      return (state.history || []).find((entry) => entry.key === key || entry.name === item.name);
+    }
+
+    function exerciseHistoryKey(item) {
+      return `${item.sport || ''}|${item.category || ''}|${item.name || ''}`.toLowerCase();
+    }
+
+    function restSecondsForExercise(item, kgValue) {
+      const base = { legs: 120, upper: 90, core: 60, other: 45, full: 90 }[item.category] || 75;
+      const levelAdd = workoutSession?.level === 'hard' ? 30 : workoutSession?.level === 'easy' ? -15 : 0;
+      const phaseAdd = workoutSession?.phase === 'recovery' ? -20 : workoutSession?.phase === 'race' ? -15 : 0;
+      const kg = Number(String(kgValue).replace(',', '.')) || 0;
+      const previous = Number(item.previousKg) || 0;
+      const loadAdd = kg && previous && kg > previous ? 15 : kg >= 80 ? 20 : kg >= 40 ? 10 : 0;
+      return Math.max(30, base + levelAdd + phaseAdd + loadAdd);
+    }
+
+    function startRest(seconds, nextName) {
+      stopRestTimer();
+      restEndsAt = Date.now() + (seconds * 1000);
+      tickRest(nextName);
+      restTimer = window.setInterval(() => tickRest(nextName), 1000);
+    }
+
+    function tickRest(nextName) {
+      const remaining = Math.max(0, Math.ceil((restEndsAt - Date.now()) / 1000));
+      const timerBox = document.getElementById('restTimerBox');
+      if (timerBox) {
+        timerBox.hidden = false;
+        timerBox.textContent = remaining ? `Pauza ${formatRest(remaining)} - dalsi cvik: ${nextName || 'zaver'}` : 'Start dalsi cvik';
+      }
+      if (!remaining) {
+        stopRestTimer();
+        playWorkoutSound();
+        notifyWorkout(nextName);
+      }
+    }
+
+    function stopRestTimer() {
+      if (restTimer) window.clearInterval(restTimer);
+      restTimer = null;
+      restEndsAt = 0;
+    }
+
+    function nextExerciseName(index) {
+      const next = workoutSession?.exercises.slice(index + 1).find((item) => !item.done);
+      return next ? next.name : 'zaver treningu';
+    }
+
+    function requestWorkoutNotifications() {
+      localStorage.setItem(SOUND_KEY, '1');
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
+    }
+
+    function notifyWorkout(nextName) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Fitko', { body: nextName ? `Zacni dalsi cvik: ${nextName}` : 'Pauza skoncila.' });
+      }
+    }
+
+    function playWorkoutSound() {
+      if (localStorage.getItem(SOUND_KEY) !== '1') return;
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const context = workoutAudioContext || new AudioContext();
+        workoutAudioContext = context;
+        if (context.state === 'suspended') context.resume();
+        const gain = context.createGain();
+        const oscillator = context.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 880;
+        gain.gain.setValueAtTime(0.001, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.25, context.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.45);
+        oscillator.connect(gain).connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.5);
+      } catch {}
+    }
+
+    function formatRest(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const rest = seconds % 60;
+      return `${minutes}:${String(rest).padStart(2, '0')}`;
+    }
+
+    function timerText() {
+      if (!restEndsAt) return '';
+      return `Pauza ${formatRest(Math.max(0, Math.ceil((restEndsAt - Date.now()) / 1000)))}`;
+    }
+
+    function formatKg(value) {
+      return Number(value).toLocaleString('sk-SK', { maximumFractionDigits: 1 });
+    }
+
+    function formatDate(value) {
+      return new Date(value).toLocaleDateString('sk-SK');
     }
 
     function trainerAdvice(plan) {
@@ -495,10 +831,48 @@
       if (plan.sport === 'triathlon' && plan.category === 'core') return 'Core pre triatlon drzi panvu pri behu, aero posed na bicykli a rotaciu pri plavani.';
       if (plan.sport === 'cycling' && plan.category === 'legs') return 'Pre cyklistiku drz kvalitu pohybu, nechod do zlyhania pred tazkym vyjazdom.';
       if (plan.sport === 'cycling' && plan.category === 'core') return 'Core ma stabilizovat panvu na bicykli, nie znicit brusaky.';
+      if (plan.category === 'legs') return 'Leg day je spodok tela: drepovy pohyb, tah cez zadok/hamstringy, jedna noha a lytka.';
+      if (plan.category === 'core') return 'Core nie su len brusaky. Ciel je pevny trup, panva a chrbat, aby sila nesla do bolesti.';
+      if (plan.category === 'upper') return 'Vrch tela ma drzat ramena, lopatky a chrbat. Pre vytrvalostne sporty bez zbytocneho nafuknutia objemu.';
       if (plan.sport === 'football') return 'Futbal potrebuje hamstringy, adduktory, zmeny smeru a prevenciu zraneni.';
       if (plan.sport === 'run') return 'Beh potrebuje jednostrannu stabilitu, lytka, chodidla a kontrolu panvy.';
       if (plan.sport === 'swim') return 'Plavanie potrebuje ramena bez bolesti, lopatky, rotaciu a pevny trup.';
       return 'Vlastny sport: zacni konzervativne, zapis reakciu tela a uprav objem po 2-3 treningoch.';
+    }
+
+    function beginnerGymHtml(plan) {
+      const settings = window.FlegmaSettings ? FlegmaSettings.read() : { mode: 'beginner' };
+      if (window.FlegmaSettings && !FlegmaSettings.isBeginnerMode(settings)) return '';
+      return `
+        <div class="beginner-card">
+          <h3>Blbuvzdorny postup</h3>
+          <ol>
+            <li>Prva seria je skusobna. Ak technika nesedi, nepridavaj vahu.</li>
+            <li>Pracovna seria konci, ked sa kazi chrbat, koleno, rameno alebo dychanie.</li>
+            <li>Vahu pridaj az nabuduce, ked dnes vsetky serie vyzerali cisto a RPE bolo pod ${plan.level === 'hard' ? '8' : '7'}.</li>
+          </ol>
+        </div>
+      `;
+    }
+
+    function blockTitle(selectedCategory) {
+      return {
+        full: 'Cely trening',
+        core: 'Core blok',
+        legs: 'Leg day',
+        upper: 'Vrch tela',
+        other: 'Mobilita / doplnky'
+      }[selectedCategory] || 'Treningovy blok';
+    }
+
+    function blockCoachText(selectedCategory) {
+      return {
+        full: 'Vyberie sa mix 6 cvikov: trup, nohy, vrch tela a mobilita. Toto je hodinovy plan pre cele telo.',
+        core: 'Vyberaju sa iba cviky na trup a stabilitu. Ak tu vidis drep alebo mrtvy tah, nieco je zle.',
+        legs: 'Vyberaju sa iba cviky na nohy: drepovy pohyb, zadny retazec, jedna noha, lytka.',
+        upper: 'Vyberaju sa iba cviky na vrch tela: tah, tlak, lopatky a rotatory ramien.',
+        other: 'Vyberaju sa iba doplnky: mobilita, dychanie, clenky, bedra, hrudna chrbtica.'
+      }[selectedCategory] || 'Vyber cvikov sa riadi zvolenym blokom.';
     }
 
     function currentSport() {
@@ -529,10 +903,13 @@
         const saved = raw ? JSON.parse(raw) : {};
         return {
           exercises: mergeExercises(saved.exercises || []),
-          plans: saved.plans || []
+          plans: saved.plans || [],
+          history: saved.history || [],
+          sessions: saved.sessions || [],
+          activeSession: saved.activeSession || null
         };
       } catch {
-        return { exercises: DEFAULT_EXERCISES, plans: [] };
+        return { exercises: DEFAULT_EXERCISES, plans: [], history: [], sessions: [], activeSession: null };
       }
     }
 
@@ -543,7 +920,17 @@
     }
 
     function saveGym() {
+      state.activeSession = workoutSession;
       localStorage.setItem(GYM_KEY, JSON.stringify(state));
+    }
+
+    function primeWorkoutSound() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        workoutAudioContext = workoutAudioContext || new AudioContext();
+        if (workoutAudioContext.state === 'suspended') workoutAudioContext.resume();
+      } catch {}
     }
 
     function ex(sportValue, categoryValue, name, note) {

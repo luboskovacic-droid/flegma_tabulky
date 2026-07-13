@@ -750,6 +750,7 @@
           <h2>AI trener</h2>
           <span class="coach-badge">${coach.mode}</span>
         </div>
+        ${beginnerCoachHtml(coach, totals, waterMl, targetWater)}
         <div class="coach-grid">
           ${coachItem('Kcal zjest', `${formatNumber(coach.targetKcal)} kcal`, macroStatus(totals.kcal, coach.targetKcal, 'target'))}
           ${coachItem('Bielkoviny zjest', `${formatNumber(coach.targetProtein)} g`, macroStatus(totals.protein, coach.targetProtein, 'target'))}
@@ -823,6 +824,30 @@
         sugar: food.sugar * ratio,
         fiber: food.fiber * ratio
       };
+    }
+
+    function beginnerCoachHtml(coach, totals, waterMl, targetWater) {
+      const settings = window.FlegmaSettings ? FlegmaSettings.read() : { mode: 'beginner' };
+      if (window.FlegmaSettings && !FlegmaSettings.isBeginnerMode(settings)) return '';
+      const steps = beginnerCoachSteps(coach, totals, waterMl, targetWater);
+      return `
+        <div class="beginner-card">
+          <h3>Najblizsi rozumny krok</h3>
+          <ol>${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
+        </div>
+      `;
+    }
+
+    function beginnerCoachSteps(coach, totals, waterMl, targetWater) {
+      const steps = [];
+      if (waterMl < targetWater * 0.75) steps.push(`Dopln vodu: teraz vypi 300-500 ml, dnes ciel cca ${formatNumber(targetWater)} ml.`);
+      if (totals.kcal <= 0) steps.push('Zapis prve jedlo. Nemusi byt dokonale, staci gramaz a realny nazov.');
+      if (coach.missingProtein > 20) steps.push(`Dalsie jedlo nech ma protein: cielovo dopln este cca ${formatNumber(coach.missingProtein)} g bielkovin.`);
+      if (coach.missingCarbs > 40) steps.push(`Dopln sacharidy jednoducho: ryza, zemiaky, pecivo, ovsene vlocky alebo cestoviny.`);
+      if (totals.fat > coach.fatLimit) steps.push('Tuky su vysoko. Dalsie jedlo daj nizkotucne: tvaroh, jogurt, ryza, zemiaky, chude maso.');
+      if (totals.sugar > coach.sugarLimit) steps.push('Cukry su nad limitom. Dalsie sacharidy daj skor skrobove, nie sladke.');
+      if (!steps.length) steps.push('Dnes ides dobre. Drz vodu, neprejedaj sa vecer a zapis posledne jedlo.');
+      return steps.slice(0, 3);
     }
 
     function entriesForDate(date) {

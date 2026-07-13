@@ -18,6 +18,7 @@
 
   const defaultSettings = {
     configured: false,
+    mode: 'beginner',
     sports: {
       fitko: true,
       bike: true,
@@ -35,7 +36,10 @@
     read: readSettings,
     save: saveSettings,
     hasAnySport,
-    isSportEnabled
+    isSportEnabled,
+    isBeginnerMode,
+    dailyFocus,
+    clampNumber
   };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -79,6 +83,7 @@
       const parsed = JSON.parse(raw);
       return {
         configured: Boolean(parsed.configured),
+        mode: parsed.mode || 'beginner',
         sports: {
           ...cloneDefault().sports,
           ...(parsed.sports || {})
@@ -131,6 +136,10 @@
       element.hidden = settings.configured && !anySport;
     });
 
+    document.querySelectorAll('[href="graphs.html"], [href="fit-import.html"], [href="data.html"], [data-module="advanced"]').forEach((element) => {
+      element.hidden = element.hidden || (settings.configured && isBeginnerMode(settings));
+    });
+
     document.querySelectorAll('[data-sport-type]').forEach((element) => {
       const sportType = element.getAttribute('data-sport-type');
       element.hidden = settings.configured && !isSportEnabled(sportType, settings);
@@ -147,7 +156,8 @@
     const enabled = Object.entries(settings.sports)
       .filter((entry) => entry[1])
       .map((entry) => SPORT_LABELS[entry[0]]);
-    return enabled.length ? enabled.join(', ') : 'Len chudnutie / strava bez sportovych modulov';
+    const mode = isBeginnerMode(settings) ? 'Jednoduchy rezim' : 'Pokrocily rezim';
+    return `${mode}: ${enabled.length ? enabled.join(', ') : 'Len chudnutie / strava bez sportovych modulov'}`;
   }
 
   function setupForms(settings) {
@@ -182,6 +192,8 @@
   }
 
   function fillForm(form, settings) {
+    const modeInput = form.querySelector(`[name="app_mode"][value="${settings.mode || 'beginner'}"]`);
+    if (modeInput) modeInput.checked = true;
     Object.keys(SPORT_LABELS).forEach((type) => {
       const input = form.querySelector(`[name="sport_${type}"]`);
       if (input) input.checked = Boolean(settings.sports[type]);
@@ -196,8 +208,56 @@
     });
     return {
       configured: true,
+      mode: form.querySelector('[name="app_mode"]')?.value || 'beginner',
       sports
     };
+  }
+
+  function isBeginnerMode(settings = readSettings()) {
+    return (settings.mode || 'beginner') === 'beginner';
+  }
+
+  function dailyFocus({ profile = {}, checkin = {}, training = null, diaryTotals = null } = {}) {
+    const weight = Number(profile.weight) || Number(checkin.weight) || 80;
+    const waterTarget = Math.round(weight * (training ? 42 : 35));
+    const water = Number(checkin.waterMl) || 0;
+    const sleep = Number(checkin.sleepHours) || 0;
+    const fatigue = Number(checkin.fatigue) || 0;
+    const soreness = Number(checkin.soreness) || 0;
+    const hasFood = diaryTotals && Number(diaryTotals.kcal) > 0;
+    const actions = [];
+
+    if (!profile.weight) actions.push('Dopln v profile aktualnu vahu. Bez nej su vypocty iba orientacne.');
+    if (!hasFood) actions.push('Zapis prve jedlo. Staci nazov jedla a gramaz.');
+    if (water < waterTarget * 0.5) actions.push(`Vypi vodu: ciel dnes cca ${waterTarget} ml.`);
+    if (training) actions.push(`Dnes mas ${trainingLabel(training.type)}. Zacni lahsie, prvych 10 minut neprepal.`);
+    if (!training) actions.push('Ak dnes netrenujes, daj aspon 20-30 min chodze alebo mobilitu.');
+    if (sleep && sleep < 7) actions.push('Spanok pod 7 h: dnes uber intenzitu a nechod do zlyhania.');
+    if (fatigue >= 4 || soreness >= 4) actions.push('Vysoka unava/svalovica: radsej regeneracia alebo lahka zona 2.');
+
+    return {
+      title: training ? 'Dnesny treningovy fokus' : 'Dnesny jednoduchy fokus',
+      waterTarget,
+      actions: actions.slice(0, 4)
+    };
+  }
+
+  function trainingLabel(type) {
+    return {
+      fitko: 'fitko',
+      bike: 'bicykel',
+      run: 'beh',
+      swim: 'plavanie',
+      brick: 'brick',
+      multi: 'multi-sport',
+      race: 'sutaz'
+    }[type] || 'trening';
+  }
+
+  function clampNumber(value, min, max) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return min;
+    return Math.min(max, Math.max(min, number));
   }
 
   function showSaved(form) {

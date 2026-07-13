@@ -168,6 +168,10 @@
           <button type="button" class="secondary" data-sport-preset="bike">Cyklistika</button>
           <button type="button" class="secondary" data-sport-preset="triathlon">Triatlon</button>
         </div>
+        <div class="mode-grid" aria-label="Rezim aplikacie">
+          <label class="sport-toggle"><input type="radio" name="app_mode" value="beginner" checked> Jednoduchy rezim</label>
+          <label class="sport-toggle"><input type="radio" name="app_mode" value="advanced"> Pokrocily rezim</label>
+        </div>
         <div class="sport-grid">
           <label class="sport-toggle"><input type="checkbox" name="sport_fitko"> Fitko</label>
           <label class="sport-toggle"><input type="checkbox" name="sport_bike"> Bike</label>
@@ -187,13 +191,15 @@
     <section class="hero">
       <div class="hero-top">
         <h1>Flegma tabulky</h1>
-        <p>Lokálne kalorické tabuľky, bio profil, tréningový kalendár, carbload a FIT/GPX analýza v jednom jednoduchom nástroji.</p>
+        <p>Jednoduchy denny trener: zapis jedlo, vodu, trening a nechaj appku povedat dalsi rozumny krok.</p>
       </div>
       <div class="hero-kpis" id="homeStats">
         <div class="kpi"><span>Jedla</span><strong>-</strong></div>
         <div class="kpi"><span>Treningy</span><strong>-</strong></div>
       </div>
     </section>
+
+    <section class="today-focus" id="todayFocus"></section>
 
     <nav class="nav" aria-label="Nastroje">
       <a class="tile" href="graphs.html" data-module="analysis">
@@ -251,6 +257,7 @@
   <script src="settings.js" defer></script>
   <script>
     const stats = document.getElementById('homeStats');
+    const focus = document.getElementById('todayFocus');
     const foods = readCount('flegma_tabulky_foods_v1');
     const trainings = readCount('flegma_tabulky_trainings_v1');
     const diary = readCount('flegma_tabulky_diary_v1');
@@ -262,6 +269,7 @@
       <div class="kpi"><span>Zapis jedal</span><strong>${diary}</strong></div>
       <div class="kpi"><span>Profil</span><strong>${profile}</strong></div>
     `;
+    document.addEventListener('DOMContentLoaded', renderTodayFocus);
 
     function readCount(key) {
       try {
@@ -270,6 +278,61 @@
       } catch {
         return 0;
       }
+    }
+
+    function renderTodayFocus() {
+      const today = new Date().toISOString().slice(0, 10);
+      const profile = readObject('flegma_tabulky_profile_v1', {});
+      const checkin = readArray('flegma_tabulky_checkins_v1').find((item) => item.date === today) || {};
+      const training = readArray('flegma_tabulky_trainings_v1').find((item) => item.date === today) || null;
+      const diaryTotals = sumDiary(readArray('flegma_tabulky_diary_v1').filter((item) => item.date === today));
+      const coach = window.FlegmaSettings ? FlegmaSettings.dailyFocus({ profile, checkin, training, diaryTotals }) : null;
+      if (!coach) return;
+      focus.innerHTML = `
+        <div>
+          <h2>${coach.title}</h2>
+          <p>Dnes nerob vsetko. Sprav tieto kroky v poradi.</p>
+        </div>
+        <ol>
+          ${coach.actions.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
+        </ol>
+        <div class="quick-actions">
+          <a href="diary.html">Zapisat jedlo</a>
+          <a href="checkin.html">Check-in</a>
+          ${training ? '<a href="gym.html">Start fitka</a>' : '<a href="profile.html">Profil</a>'}
+        </div>
+      `;
+    }
+
+    function readObject(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function readArray(key) {
+      const value = readObject(key, []);
+      return Array.isArray(value) ? value : [];
+    }
+
+    function sumDiary(entries) {
+      return entries.reduce((sum, item) => {
+        const values = item.values || {};
+        sum.kcal += Number(values.kcal) || 0;
+        return sum;
+      }, { kcal: 0 });
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
     }
   </script>
 </body>

@@ -261,10 +261,14 @@
       const summary = FlegmaWellness.weeklySummary(date);
       const alerts = FlegmaWellness.alerts(date);
       const checkin = FlegmaWellness.checkinForDate(date) || {};
-      const targetWater = FlegmaWellness.hydrationTarget(FlegmaWellness.loadProfile(), FlegmaWellness.trainingForDate(date));
+      const profile = FlegmaWellness.loadProfile();
+      const training = FlegmaWellness.trainingForDate(date);
+      const targetWater = FlegmaWellness.hydrationTarget(profile, training);
       const readiness = readinessText(checkin);
+      const focus = window.FlegmaSettings ? FlegmaSettings.dailyFocus({ profile, checkin, training, diaryTotals: diaryTotalsForDate(date) }) : null;
 
       dailyMessages.innerHTML = [
+        ...(focus ? [{ title: focus.title, text: focus.actions.join(' ') }] : []),
         ...FlegmaWellness.dailyMessages(date),
         { title: 'Trening dnes', text: readiness },
         { title: 'Hydratacia stav', text: `${formatNumber(Number(checkin.waterMl) || 0)} / ${formatNumber(targetWater)} ml` }
@@ -292,6 +296,18 @@
       if (fatigue >= 4 || soreness >= 4 || sleepQuality <= 1) return 'Dnes zniz intenzitu, daj lahsi Z1-Z2 alebo volno. Sacharidy drz podla planu, regeneraciu priorizuj.';
       if (fatigue >= 3 || soreness >= 3 || sleepQuality <= 2) return 'Dnes opatrne: kratsi trening, viac vody, po treningu sacharidy + protein.';
       return 'Ak nie je volno, trening moze ist podla planu. Drz sacharidy a hydrataciu podla odporucania.';
+    }
+
+    function diaryTotalsForDate(date) {
+      try {
+        const entries = JSON.parse(localStorage.getItem('flegma_tabulky_diary_v1') || '[]');
+        return entries.filter((entry) => entry.date === date).reduce((sum, entry) => {
+          sum.kcal += Number(entry.values?.kcal) || 0;
+          return sum;
+        }, { kcal: 0 });
+      } catch {
+        return { kcal: 0 };
+      }
     }
 
     function card(title, text) {
