@@ -1,10 +1,11 @@
-const CACHE_NAME = 'flegma-tabulky-v14-unified-menu-20260712';
+const CACHE_NAME = 'flegma-tabulky-v20-slovak-food-seeds-20260713';
 const APP_SHELL = [
   './',
   './index.html',
   './profile.html',
   './diary.html',
   './calendar.html',
+  './checkin.html',
   './training.html',
   './fit-import.html',
   './foods.html',
@@ -16,6 +17,8 @@ const APP_SHELL = [
   './ui.css',
   './pwa.js',
   './settings.js',
+  './wellness.js',
+  './food-seeds.js',
   './manifest.webmanifest',
   './icon.svg',
   './offline.html'
@@ -46,5 +49,17 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request)
       .then((cached) => cached || fetch(event.request))
       .catch(() => caches.match('./offline.html'))
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
+      }
+      return clients.openWindow('./checkin.html');
+    })
   );
 });

@@ -5,5 +5,19 @@
     navigator.serviceWorker.register('./sw.js').catch(function () {
       // App still works as a normal static site when service workers are blocked.
     });
+    runWellnessNotifications();
   });
+
+  function runWellnessNotifications() {
+    if (window.FlegmaWellness) {
+      window.FlegmaWellness.notifyDueMessages();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = './wellness.js';
+    script.onload = function () {
+      if (window.FlegmaWellness) window.FlegmaWellness.notifyDueMessages();
+    };
+    document.head.appendChild(script);
+  }
 })();

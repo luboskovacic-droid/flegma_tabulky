@@ -443,6 +443,7 @@
     </div>
     <div class="menu-block menu-tools">
       <a href="fit-import.html">FIT import</a>
+      <a href="checkin.html">Check-in</a>
       <a href="profile.html">Profil</a>
       <a href="foods.html" aria-current="page">Jedla</a>
       <a href="recipes.html">Recepty</a>
@@ -549,6 +550,7 @@
 
   <script src="pwa.js" defer></script>
   <script src="settings.js" defer></script>
+  <script src="food-seeds.js"></script>
   <script>
     const STORAGE_KEY = 'flegma_tabulky_foods_v1';
     const DEFAULT_FOODS = [
@@ -568,6 +570,7 @@
       { id: 'seed-losos', name: 'Losos', kcal: 208, protein: 20, carbs: 0, fat: 13, sugar: 0, fiber: 0 },
       { id: 'seed-olivovy-olej', name: 'Olivovy olej', kcal: 884, protein: 0, carbs: 0, fat: 100, sugar: 0, fiber: 0 }
     ];
+    const ALL_DEFAULT_FOODS = [...DEFAULT_FOODS, ...(window.FLEGMA_SLOVAK_FOODS || [])];
 
     const fields = ['name', 'kcal', 'protein', 'carbs', 'fat', 'sugar', 'fiber'];
     const state = {
@@ -756,13 +759,13 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedFoods));
         return mergedFoods;
       } catch {
-        return DEFAULT_FOODS;
+        return ALL_DEFAULT_FOODS;
       }
     }
 
     function mergeDefaultFoods(foods) {
       const existingNames = new Set(foods.map((food) => food.name.toLowerCase()));
-      const missingDefaults = DEFAULT_FOODS.filter((food) => !existingNames.has(food.name.toLowerCase()));
+      const missingDefaults = ALL_DEFAULT_FOODS.filter((food) => !existingNames.has(food.name.toLowerCase()));
       return [...foods, ...missingDefaults];
     }
 

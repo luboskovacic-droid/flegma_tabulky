@@ -502,6 +502,7 @@
     </div>
     <div class="menu-block menu-tools">
       <a href="fit-import.html">FIT import</a>
+      <a href="checkin.html">Check-in</a>
       <a href="profile.html">Profil</a>
       <a href="foods.html">Jedla</a>
       <a href="recipes.html">Recepty</a>
@@ -561,6 +562,7 @@
 
       <section class="panel">
         <div class="summary" id="summary"></div>
+        <div class="coach-panel hydration-panel" id="hydrationPanel"></div>
         <div class="coach-panel" id="coachPanel"></div>
         <div class="meal-tabs" id="mealTabs"></div>
         <div class="entry-list" id="entryList"></div>
@@ -572,6 +574,8 @@
 
   <script src="pwa.js" defer></script>
   <script src="settings.js" defer></script>
+  <script src="wellness.js"></script>
+  <script src="food-seeds.js"></script>
   <script>
     const FOOD_STORAGE_KEY = 'flegma_tabulky_foods_v1';
     const DIARY_STORAGE_KEY = 'flegma_tabulky_diary_v1';
@@ -595,6 +599,7 @@
       { id: 'seed-losos', name: 'Losos', kcal: 208, protein: 20, carbs: 0, fat: 13, sugar: 0, fiber: 0 },
       { id: 'seed-olivovy-olej', name: 'Olivovy olej', kcal: 884, protein: 0, carbs: 0, fat: 100, sugar: 0, fiber: 0 }
     ];
+    const ALL_DEFAULT_FOODS = [...DEFAULT_FOODS, ...(window.FLEGMA_SLOVAK_FOODS || [])];
     const meals = [
       { id: 'ranajky', label: 'Ranajky' },
       { id: 'obed', label: 'Obed' },
@@ -618,6 +623,7 @@
     const gramsInput = document.getElementById('gramsInput');
     const mealInput = document.getElementById('mealInput');
     const summary = document.getElementById('summary');
+    const hydrationPanel = document.getElementById('hydrationPanel');
     const coachPanel = document.getElementById('coachPanel');
     const mealTabs = document.getElementById('mealTabs');
     const entryList = document.getElementById('entryList');
@@ -700,6 +706,9 @@
       const event = findCarbloadEvent(state.date);
       const coach = calculateCoach(profile, totals, event, dayTraining);
       const mealPlan = buildMealPlan(coach, dayEntries);
+      const checkin = window.FlegmaWellness ? FlegmaWellness.checkinForDate(state.date) : null;
+      const targetWater = window.FlegmaWellness ? FlegmaWellness.hydrationTarget(profile, dayTraining) : Math.round((profile.weight || 80) * 35);
+      const waterMl = Number(checkin?.waterMl) || 0;
 
       foodOptions.innerHTML = state.foods
         .map((food) => `<option value="${escapeHtml(food.name)}"></option>`)
@@ -713,6 +722,25 @@
         ${summaryItem('Tuky', `${formatNumber(totals.fat)} g`, macroStatus(totals.fat, coach.targetFat, 'target'))}
         ${summaryItem('Cukry', `${formatNumber(totals.sugar)} g`, macroStatus(totals.sugar, coach.sugarLimit, 'limit'))}
         ${summaryItem('Vlaknina', `${formatNumber(totals.fiber)} g`, macroStatus(totals.fiber, coach.fiberTarget, 'target'))}
+      `;
+
+      hydrationPanel.innerHTML = `
+        <div class="coach-head">
+          <h2>Hydratacia</h2>
+          <span class="coach-badge">${formatNumber(waterMl)} / ${formatNumber(targetWater)} ml</span>
+        </div>
+        <div class="coach-grid">
+          ${coachItem('Voda ciel', `${formatNumber(targetWater)} ml`, '')}
+          ${coachItem('Voda vypita', `${formatNumber(waterMl)} ml`, hydrationStatusClass(waterMl, targetWater))}
+          ${coachItem('Este doplnit', `${formatNumber(Math.max(0, targetWater - waterMl))} ml`, waterMl >= targetWater ? 'is-ok' : 'is-low')}
+        </div>
+        <form class="inline-water" onsubmit="saveWater(event)">
+          <label>
+            Zapis vodu ml
+            <input id="waterInput" type="number" min="0" max="10000" step="50" inputmode="numeric" value="${waterMl || ''}">
+          </label>
+          <button type="submit">Ulozit vodu</button>
+        </form>
       `;
 
       coachPanel.innerHTML = `
@@ -836,6 +864,22 @@
           <strong>${value}</strong>
         </div>
       `;
+    }
+
+    function saveWater(event) {
+      event.preventDefault();
+      if (!window.FlegmaWellness) return;
+      const water = readNumber('waterInput');
+      FlegmaWellness.upsertCheckin(state.date, { waterMl: water });
+      showNotice('Hydratacia ulozena.');
+      render();
+    }
+
+    function hydrationStatusClass(water, target) {
+      if (!target) return '';
+      if (water >= target) return 'is-ok';
+      if (water >= target * 0.75) return 'is-low';
+      return 'is-over';
     }
 
     function calculateCoach(profile, totals, event, dayTraining) {
@@ -1208,13 +1252,13 @@
         localStorage.setItem(FOOD_STORAGE_KEY, JSON.stringify(mergedFoods));
         return mergedFoods;
       } catch {
-        return DEFAULT_FOODS;
+        return ALL_DEFAULT_FOODS;
       }
     }
 
     function mergeDefaultFoods(foods) {
       const existingNames = new Set(foods.map((food) => food.name.toLowerCase()));
-      const missingDefaults = DEFAULT_FOODS.filter((food) => !existingNames.has(food.name.toLowerCase()));
+      const missingDefaults = ALL_DEFAULT_FOODS.filter((food) => !existingNames.has(food.name.toLowerCase()));
       return [...foods, ...missingDefaults];
     }
 

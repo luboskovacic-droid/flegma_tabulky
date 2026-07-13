@@ -60,16 +60,53 @@ body > main:not(.app) {
   padding: 0 !important;
 }
 
+.menu-toggle {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 35 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-height: 48px !important;
+  margin: 0 -10px !important;
+  padding: 10px 14px !important;
+  border: 2px solid #005fcc !important;
+  border-radius: 0 0 12px 12px !important;
+  background: #dcebff !important;
+  color: #002f6c !important;
+  font-size: 18px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.menu-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
 .side-menu {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: grid;
+  position: fixed;
+  top: 52px;
+  left: 10px;
+  right: 10px;
+  z-index: 34;
+  display: none;
   gap: 8px;
-  margin: 0 -10px;
+  max-height: calc(100vh - 66px);
+  overflow: auto;
+  margin: 0;
   padding: 10px;
-  border-bottom: 2px solid #9aa8b8;
+  border: 2px solid #9aa8b8;
+  border-radius: 12px;
   background: #f7f9fc;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.26);
+}
+
+.menu-open .side-menu {
+  display: grid;
 }
 
 .menu-block {
@@ -482,10 +519,18 @@ tr:hover td {
     padding: 28px 0 40px;
   }
 
+  .menu-toggle {
+    display: none !important;
+  }
+
   .side-menu {
+    position: sticky;
     top: 18px;
     display: grid;
+    left: auto;
+    right: auto;
     gap: 8px;
+    max-height: none;
     margin: 0;
     padding: 12px;
     overflow: visible;
@@ -524,6 +569,47 @@ tr:hover td {
   .panel-inner,
   .form-panel {
     padding: 20px !important;
+  }
+}
+
+@media (min-width: 760px) and (max-width: 979px) {
+  .app-shell {
+    width: min(1180px, calc(100% - 20px));
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 14px 0 86px;
+  }
+
+  .menu-toggle {
+    display: inline-flex !important;
+  }
+
+  .side-menu {
+    position: fixed;
+    top: 52px;
+    left: 10px;
+    right: 10px;
+    display: none;
+    max-height: calc(100vh - 66px);
+    overflow: auto;
+    margin: 0;
+    padding: 10px;
+    border: 2px solid #9aa8b8;
+    border-radius: 12px;
+    background: #f7f9fc;
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.26);
+  }
+
+  .menu-open .side-menu {
+    display: grid;
+  }
+
+  .menu-block {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .menu-tools {
+    margin-top: 0;
   }
 }
 

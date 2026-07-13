@@ -34,6 +34,21 @@
       gap: 10px;
     }
 
+    .ingredient-tools {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 2px solid #9aa8b8;
+      border-radius: 10px;
+      background: #eef3f8;
+    }
+
+    .ingredient-tools h3 {
+      margin: 0;
+      color: #05070a;
+      font-size: 17px;
+    }
+
     .ingredient-card,
     .recipe-card,
     .fuel-card {
@@ -130,6 +145,7 @@
     </div>
     <div class="menu-block menu-tools">
       <a href="fit-import.html">FIT import</a>
+      <a href="checkin.html">Check-in</a>
       <a href="profile.html">Profil</a>
       <a href="foods.html">Jedla</a>
       <a href="recipes.html" aria-current="page">Recepty</a>
@@ -193,17 +209,22 @@
             </div>
           </form>
 
-          <div class="ingredient-row">
-            <label>
-              Surovina
-              <input id="ingredientName" list="foodOptions" placeholder="zacni pisat..." autocomplete="off">
-              <datalist id="foodOptions"></datalist>
-            </label>
-            <label>
-              g/ml
-              <input id="ingredientGrams" type="number" min="0" step="0.1" inputmode="decimal">
-            </label>
-            <button type="button" id="addIngredient">Pridat</button>
+          <div class="ingredient-tools">
+            <h3>Suroviny receptu</h3>
+            <p class="muted">Pridaj jednu surovinu, potom dalsiu. Napr. ranajky z 4 surovin ulozis az na konci ako jedno jedlo.</p>
+            <div class="ingredient-row">
+              <label>
+                Surovina
+                <input id="ingredientName" list="foodOptions" placeholder="zacni pisat..." autocomplete="off">
+                <datalist id="foodOptions"></datalist>
+              </label>
+              <label>
+                g/ml
+                <input id="ingredientGrams" type="number" min="0" step="0.1" inputmode="decimal">
+              </label>
+              <button type="button" id="addIngredient">Pridat dalsiu surovinu</button>
+            </div>
+            <button type="button" id="useIngredientWeight">Pouzit sucet surovin ako vyslednu hmotnost</button>
           </div>
 
           <div class="ingredient-list" id="ingredientList"></div>
@@ -227,13 +248,14 @@
 
   <script src="pwa.js" defer></script>
   <script src="settings.js" defer></script>
+  <script src="food-seeds.js"></script>
   <script>
     const FOOD_KEY = 'flegma_tabulky_foods_v1';
     const RECIPE_KEY = 'flegma_tabulky_recipes_v1';
     const macroFields = ['kcal', 'protein', 'carbs', 'fat', 'sugar', 'fiber'];
 
     const state = {
-      foods: loadArray(FOOD_KEY),
+      foods: mergeSeedFoods(loadArray(FOOD_KEY)),
       recipes: loadArray(RECIPE_KEY),
       ingredients: []
     };
@@ -248,6 +270,7 @@
     const ingredientName = document.getElementById('ingredientName');
     const ingredientGrams = document.getElementById('ingredientGrams');
     const addIngredient = document.getElementById('addIngredient');
+    const useIngredientWeight = document.getElementById('useIngredientWeight');
     const foodOptions = document.getElementById('foodOptions');
     const ingredientList = document.getElementById('ingredientList');
     const recipeSummary = document.getElementById('recipeSummary');
@@ -256,6 +279,12 @@
     const notice = document.getElementById('notice');
 
     addIngredient.addEventListener('click', addIngredientToRecipe);
+    useIngredientWeight.addEventListener('click', useTotalIngredientWeight);
+    ingredientGrams.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      addIngredientToRecipe();
+    });
     recipeForm.addEventListener('submit', saveRecipe);
     [recipeType, finalWeight, portionSize, sodium, caffeine].forEach((input) => input.addEventListener('input', render));
 
@@ -281,6 +310,18 @@
       });
       ingredientName.value = '';
       ingredientGrams.value = '';
+      ingredientName.focus();
+      render();
+    }
+
+    function useTotalIngredientWeight() {
+      const total = totalIngredientWeight();
+      if (total <= 0) {
+        showNotice('Najprv pridaj suroviny.');
+        return;
+      }
+      finalWeight.value = Math.round(total);
+      showNotice('Vysledna hmotnost je nastavena na sucet surovin.');
       render();
     }
 
@@ -357,7 +398,15 @@
         .map((food) => `<option value="${escapeHtml(food.name)}"></option>`)
         .join('');
 
-      ingredientList.innerHTML = state.ingredients.length ? state.ingredients.map((item) => `
+      const ingredientTotal = totalIngredientWeight();
+      ingredientList.innerHTML = state.ingredients.length ? `
+        <article class="ingredient-card">
+          <div class="recipe-head">
+            <h3>${state.ingredients.length} ${pluralizeIngredients(state.ingredients.length)}</h3>
+            <span class="pill">${formatNumber(ingredientTotal)} g/ml spolu</span>
+          </div>
+        </article>
+        ${state.ingredients.map((item) => `
         <article class="ingredient-card">
           <div class="recipe-head">
             <h3>${escapeHtml(item.name)}</h3>
@@ -371,7 +420,7 @@
           </div>
           <button type="button" class="danger" onclick="removeIngredient('${item.id}')">Odstranit</button>
         </article>
-      `).join('') : '<p class="muted">Pridaj suroviny z databazy jedal.</p>';
+      `).join('')}` : '<p class="muted">Pridaj suroviny z databazy jedal.</p>';
 
       const calculated = calculateRecipe();
       recipeSummary.innerHTML = `
@@ -447,6 +496,10 @@
       };
     }
 
+    function totalIngredientWeight() {
+      return state.ingredients.reduce((sum, item) => sum + (Number(item.grams) || 0), 0);
+    }
+
     function calculateValues(food, grams) {
       return scaleMacros(food, grams / 100);
     }
@@ -477,6 +530,15 @@
       }
     }
 
+    function mergeSeedFoods(foods) {
+      const seeds = window.FLEGMA_SLOVAK_FOODS || [];
+      const existingNames = new Set(foods.map((food) => food.name.toLowerCase()));
+      const missingSeeds = seeds.filter((food) => !existingNames.has(food.name.toLowerCase()));
+      const merged = [...foods, ...missingSeeds];
+      localStorage.setItem(FOOD_KEY, JSON.stringify(merged));
+      return merged;
+    }
+
     function readNumber(valueText) {
       const number = Number.parseFloat(String(valueText).replace(',', '.'));
       return Number.isFinite(number) ? number : 0;
@@ -502,6 +564,12 @@
 
     function formatNumber(value) {
       return Number(value).toLocaleString('sk-SK', { maximumFractionDigits: 1 });
+    }
+
+    function pluralizeIngredients(count) {
+      if (count === 1) return 'surovina';
+      if (count > 1 && count < 5) return 'suroviny';
+      return 'surovin';
     }
 
     function escapeHtml(value) {

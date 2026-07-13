@@ -39,11 +39,38 @@
   };
 
   document.addEventListener('DOMContentLoaded', () => {
+    setupMenu();
     const settings = readSettings();
     applyVisibility(settings);
     setupForms(settings);
     filterCalendarType(settings);
   });
+
+  function setupMenu() {
+    const menu = document.querySelector('.side-menu');
+    if (!menu || document.querySelector('.menu-toggle')) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'menu-toggle';
+    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-label', 'Otvorit menu');
+    button.innerHTML = '<span class="menu-icon">☰</span><span>Menu</span>';
+    menu.parentElement.insertBefore(button, menu);
+
+    button.addEventListener('click', () => {
+      const isOpen = document.body.classList.toggle('menu-open');
+      button.setAttribute('aria-expanded', String(isOpen));
+      button.setAttribute('aria-label', isOpen ? 'Zavriet menu' : 'Otvorit menu');
+    });
+
+    menu.addEventListener('click', (event) => {
+      if (!event.target.closest('a')) return;
+      document.body.classList.remove('menu-open');
+      button.setAttribute('aria-expanded', 'false');
+      button.setAttribute('aria-label', 'Otvorit menu');
+    });
+  }
 
   function readSettings() {
     try {

@@ -409,7 +409,10 @@
                 Cielova vaha kg
                 <input id="targetWeight" type="number" min="35" max="250" step="0.1" inputmode="decimal">
               </label>
-              <div></div>
+              <label>
+                Obvod pasa cm
+                <input id="waist" type="number" min="40" max="200" step="0.1" inputmode="decimal">
+              </label>
             </div>
 
             <div class="grid-2">
@@ -493,9 +496,10 @@
 
   <script src="pwa.js" defer></script>
   <script src="settings.js" defer></script>
+  <script src="wellness.js"></script>
   <script>
     const STORAGE_KEY = 'flegma_tabulky_profile_v1';
-    const fields = ['birthYear', 'sex', 'height', 'weight', 'targetWeight', 'goal', 'activity', 'trainingHours', 'temperFlegma', 'temperMelan', 'temperCholerik', 'temperSangvinik'];
+    const fields = ['birthYear', 'sex', 'height', 'weight', 'targetWeight', 'waist', 'goal', 'activity', 'trainingHours', 'temperFlegma', 'temperMelan', 'temperCholerik', 'temperSangvinik'];
 
     const profileForm = document.getElementById('profileForm');
     const analysisGrid = document.getElementById('analysisGrid');
@@ -543,6 +547,7 @@
         height: readNumber('height'),
         weight: readNumber('weight'),
         targetWeight: readNumber('targetWeight'),
+        waist: readNumber('waist'),
         goal: value('goal'),
         activity: readNumber('activity'),
         trainingHours: readNumber('trainingHours'),
@@ -566,6 +571,7 @@
         height: 180,
         weight: 80,
         targetWeight: 75,
+        waist: 90,
         goal: 'fit',
         activity: 1.55,
         trainingHours: 5,
@@ -605,6 +611,7 @@
       const carbs = carbRange(profile);
       const fat = Math.max(35, profile.weight * 0.8);
       const weightDelta = calculateWeightDelta(profile);
+      const body = window.FlegmaWellness ? FlegmaWellness.bodyComposition(profile) : { bodyFat: 0, fatMass: 0, leanMass: 0, waistHeightRatio: 0, band: '-' };
       latestAnalysis = { profile, age, bmi, bmr, tdee, targetCalories, protein, carbs, fat, weightDelta };
 
       analysisGrid.innerHTML = `
@@ -612,6 +619,10 @@
         ${metric('BMI', bmi ? formatNumber(bmi) : '-', 'bmi')}
         ${metric('Cielova vaha', profile.targetWeight ? `${formatNumber(profile.targetWeight)} kg` : '-', 'targetWeight')}
         ${metric('Rozdiel vahy', weightDelta !== null ? `${formatNumber(weightDelta)} kg` : '-', 'weightDelta')}
+        ${metric('Pas/vyska', body.waistHeightRatio ? formatNumber(body.waistHeightRatio) : '-', 'waist')}
+        ${metric('Tuk odhad', body.bodyFat ? `${formatNumber(body.bodyFat)} %` : '-', 'bodyFat')}
+        ${metric('Tuk kg', body.fatMass ? `${formatNumber(body.fatMass)} kg` : '-', 'bodyFat')}
+        ${metric('Cista hmota', body.leanMass ? `${formatNumber(body.leanMass)} kg` : '-', 'bodyFat')}
         ${metric('BMR', bmr ? `${formatNumber(bmr)} kcal` : '-', 'bmr')}
         ${metric('TDEE', tdee ? `${formatNumber(tdee)} kcal` : '-', 'tdee')}
         ${metric('Ciel kcal', targetCalories ? `${formatNumber(targetCalories)} kcal` : '-', 'targetCalories')}
@@ -702,6 +713,7 @@
       const data = latestAnalysis || {};
       const profile = data.profile || readProfile();
       const bmiBand = bmiCategory(data.bmi);
+      const body = window.FlegmaWellness ? FlegmaWellness.bodyComposition(profile) : { band: '-', waistHeightRatio: 0, bodyFat: 0, fatMass: 0, leanMass: 0 };
       const proteinPerKg = proteinMultiplier(profile.goal);
       const activityLabel = activityText(profile.activity);
       const goalKcalText = profile.goal === 'lose' ? 'TDEE - 400 kcal pre chudnutie.' : profile.goal === 'gain' ? 'TDEE + 300 kcal pre priberanie.' : 'Pri udrzani je ciel blizko TDEE.';
@@ -732,6 +744,26 @@
           title: 'Rozdiel vahy',
           body: 'Rozdiel ukazuje, kolko kg je medzi aktualnou a cielovou vahou.',
           items: [`Aktualne: ${data.weightDelta !== null ? `${formatNumber(data.weightDelta)} kg` : '-'}`, 'Kladne cislo znamena, ze ciel je nizsie ako aktualna vaha.', 'Zaporne cislo znamena, ze ciel je vyssie ako aktualna vaha.']
+        },
+        waist: {
+          title: 'Obvod pasa',
+          body: 'Pas je prakticky signal zmien tuku v strede tela. Pomer pas/vyska je casto uzitocnejsi ako samotne BMI.',
+          items: [
+            `Pas: ${profile.waist ? `${formatNumber(profile.waist)} cm` : '-'}`,
+            `Pas/vyska: ${body.waistHeightRatio ? formatNumber(body.waistHeightRatio) : '-'}`,
+            `Pasmo: ${body.band}`,
+            'Pod 0,5 je orientacne OK, 0,5 az 0,6 zvysene riziko, nad 0,6 vysoke riziko.'
+          ]
+        },
+        bodyFat: {
+          title: 'Odhad tuku a svalov',
+          body: 'Pouzity je orientacny RFM vypocet z vysky, pasa a pohlavia. Nie je to DEXA ani lekarske meranie.',
+          items: [
+            `Tuk: ${body.bodyFat ? `${formatNumber(body.bodyFat)} %` : '-'}`,
+            `Tukova hmota: ${body.fatMass ? `${formatNumber(body.fatMass)} kg` : '-'}`,
+            `Cista hmota: ${body.leanMass ? `${formatNumber(body.leanMass)} kg` : '-'}`,
+            'Trend v case je dolezitejsi ako jedno cislo.'
+          ]
         },
         bmr: {
           title: 'BMR',

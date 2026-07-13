@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Check-in - Flegma tabulky</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <style>
+    .check-layout,
+    .check-stack,
+    .alert-list,
+    .message-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .check-card,
+    .alert-card {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 2px solid #9aa8b8;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .alert-card.warn {
+      border-color: #946200;
+      background: #fff7db;
+    }
+
+    .alert-card.danger {
+      border-color: #b42318;
+      background: #fff1f0;
+    }
+
+    .check-card strong,
+    .alert-card strong {
+      color: #05070a;
+      font-size: 18px;
+    }
+
+    .check-card span,
+    .alert-card span {
+      color: #334155;
+      font-weight: 800;
+    }
+
+    @media (min-width: 860px) {
+      .check-layout {
+        grid-template-columns: 390px minmax(0, 1fr);
+        align-items: start;
+      }
+
+      .form-panel {
+        position: sticky;
+        top: 18px;
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html">Kalorie</a>
+      <a href="calendar.html">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="checkin.html" aria-current="page">Check-in</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+
+  <main class="app">
+    <header>
+      <div>
+        <h1>Ranny check-in</h1>
+        <p class="subtitle">Hmotnost, pas, spanok, unava, svalovica, hydratacia a odporucanie na trening.</p>
+      </div>
+    </header>
+
+    <section class="check-layout">
+      <aside class="panel form-panel">
+        <div class="panel-inner check-stack">
+          <h2 class="panel-title">Dnes</h2>
+          <form id="checkForm" autocomplete="off">
+            <label>
+              Datum
+              <input id="date" type="date" required>
+            </label>
+            <div class="grid-2">
+              <label>
+                Hmotnost kg
+                <input id="weight" type="number" min="30" max="250" step="0.1" inputmode="decimal">
+              </label>
+              <label>
+                Obvod pasa cm
+                <input id="waist" type="number" min="40" max="200" step="0.1" inputmode="decimal">
+              </label>
+            </div>
+            <div class="grid-2">
+              <label>
+                Spanok hod.
+                <input id="sleepHours" type="number" min="0" max="14" step="0.25" inputmode="decimal">
+              </label>
+              <label>
+                Kvalita spanku 0-5
+                <input id="sleepQuality" type="number" min="0" max="5" step="1" inputmode="numeric">
+              </label>
+            </div>
+            <div class="grid-2">
+              <label>
+                Unava 0-5
+                <input id="fatigue" type="number" min="0" max="5" step="1" inputmode="numeric">
+              </label>
+              <label>
+                Svalovica 0-5
+                <input id="soreness" type="number" min="0" max="5" step="1" inputmode="numeric">
+              </label>
+            </div>
+            <div class="grid-2">
+              <label>
+                Voda ml
+                <input id="waterMl" type="number" min="0" max="10000" step="50" inputmode="numeric">
+              </label>
+              <label>
+                Trening hotovy
+                <select id="trainingDone">
+                  <option value="false">Nie</option>
+                  <option value="true">Ano</option>
+                </select>
+              </label>
+            </div>
+            <button type="submit" class="primary">Ulozit check-in</button>
+          </form>
+          <button type="button" id="enableNotifications">Zapnut upozornenia</button>
+          <div class="notice" id="notice" role="status"></div>
+        </div>
+      </aside>
+
+      <section class="check-stack">
+        <div class="panel">
+          <div class="panel-inner check-stack">
+            <h2 class="panel-title">Odporucanie dnes</h2>
+            <div class="message-list" id="dailyMessages"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-inner check-stack">
+            <h2 class="panel-title">Tyzdenna kontrola</h2>
+            <div class="metric-grid" id="weekSummary"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-inner check-stack">
+            <h2 class="panel-title">Automaticke upozornenia</h2>
+            <div class="alert-list" id="alerts"></div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script src="wellness.js"></script>
+  <script>
+    const fields = ['date', 'weight', 'waist', 'sleepHours', 'sleepQuality', 'fatigue', 'soreness', 'waterMl', 'trainingDone'];
+    const form = document.getElementById('checkForm');
+    const dateInput = document.getElementById('date');
+    const dailyMessages = document.getElementById('dailyMessages');
+    const weekSummary = document.getElementById('weekSummary');
+    const alertsBox = document.getElementById('alerts');
+    const notice = document.getElementById('notice');
+    const enableNotifications = document.getElementById('enableNotifications');
+
+    document.addEventListener('DOMContentLoaded', () => {
+      dateInput.value = FlegmaWellness.today();
+      loadForm();
+      render();
+      FlegmaWellness.notifyDueMessages(dateInput.value);
+    });
+
+    dateInput.addEventListener('change', () => {
+      loadForm();
+      render();
+    });
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const data = readForm();
+      FlegmaWellness.upsertCheckin(data.date, data);
+      showNotice('Check-in ulozeny.');
+      render();
+    });
+
+    enableNotifications.addEventListener('click', async () => {
+      const result = await FlegmaWellness.requestNotifications();
+      showNotice(result === 'granted' ? 'Upozornenia su povolene.' : 'Upozornenia sa nepodarilo povolit.');
+      FlegmaWellness.notifyDueMessages(dateInput.value);
+    });
+
+    function loadForm() {
+      const profile = FlegmaWellness.loadProfile();
+      const checkin = FlegmaWellness.checkinForDate(dateInput.value) || {};
+      document.getElementById('weight').value = checkin.weight ?? profile.weight ?? '';
+      document.getElementById('waist').value = checkin.waist ?? profile.waist ?? '';
+      document.getElementById('sleepHours').value = checkin.sleepHours ?? '';
+      document.getElementById('sleepQuality').value = checkin.sleepQuality ?? '';
+      document.getElementById('fatigue').value = checkin.fatigue ?? '';
+      document.getElementById('soreness').value = checkin.soreness ?? '';
+      document.getElementById('waterMl').value = checkin.waterMl ?? '';
+      document.getElementById('trainingDone').value = String(Boolean(checkin.trainingDone));
+    }
+
+    function readForm() {
+      return {
+        date: dateInput.value,
+        weight: readNumber('weight'),
+        waist: readNumber('waist'),
+        sleepHours: readNumber('sleepHours'),
+        sleepQuality: readNumber('sleepQuality'),
+        fatigue: readNumber('fatigue'),
+        soreness: readNumber('soreness'),
+        waterMl: readNumber('waterMl'),
+        trainingDone: document.getElementById('trainingDone').value === 'true'
+      };
+    }
+
+    function render() {
+      const date = dateInput.value || FlegmaWellness.today();
+      const summary = FlegmaWellness.weeklySummary(date);
+      const alerts = FlegmaWellness.alerts(date);
+      const checkin = FlegmaWellness.checkinForDate(date) || {};
+      const targetWater = FlegmaWellness.hydrationTarget(FlegmaWellness.loadProfile(), FlegmaWellness.trainingForDate(date));
+      const readiness = readinessText(checkin);
+
+      dailyMessages.innerHTML = [
+        ...FlegmaWellness.dailyMessages(date),
+        { title: 'Trening dnes', text: readiness },
+        { title: 'Hydratacia stav', text: `${formatNumber(Number(checkin.waterMl) || 0)} / ${formatNumber(targetWater)} ml` }
+      ].map((message) => card(message.title, message.text)).join('');
+
+      weekSummary.innerHTML = `
+        ${metric('Priem. vaha', summary.avgWeight ? `${formatNumber(summary.avgWeight)} kg` : '-')}
+        ${metric('Priem. pas', summary.avgWaist ? `${formatNumber(summary.avgWaist)} cm` : '-')}
+        ${metric('Priem. kcal', summary.avgKcal ? `${formatNumber(summary.avgKcal)} kcal` : '-')}
+        ${metric('TSS', formatNumber(summary.tss))}
+        ${metric('Spanok', summary.avgSleep ? `${formatNumber(summary.avgSleep)} h` : '-')}
+        ${metric('Check-in dni', `${summary.checkinDays}/7`)}
+        ${metric('Trening dni', `${summary.trainingDays}/7`)}
+      `;
+
+      alertsBox.innerHTML = alerts.length
+        ? alerts.map((alert) => `<article class="alert-card ${alert.level}"><strong>${alert.level === 'danger' ? 'Riziko' : 'Pozor'}</strong><span>${alert.text}</span></article>`).join('')
+        : '<p class="muted">Ziadne automaticke upozornenie.</p>';
+    }
+
+    function readinessText(checkin) {
+      const fatigue = Number(checkin?.fatigue) || 0;
+      const soreness = Number(checkin?.soreness) || 0;
+      const sleepQuality = Number(checkin?.sleepQuality) || 0;
+      if (fatigue >= 4 || soreness >= 4 || sleepQuality <= 1) return 'Dnes zniz intenzitu, daj lahsi Z1-Z2 alebo volno. Sacharidy drz podla planu, regeneraciu priorizuj.';
+      if (fatigue >= 3 || soreness >= 3 || sleepQuality <= 2) return 'Dnes opatrne: kratsi trening, viac vody, po treningu sacharidy + protein.';
+      return 'Ak nie je volno, trening moze ist podla planu. Drz sacharidy a hydrataciu podla odporucania.';
+    }
+
+    function card(title, text) {
+      return `<article class="check-card"><strong>${title}</strong><span>${text}</span></article>`;
+    }
+
+    function metric(label, value) {
+      return `<article class="check-card"><span>${label}</span><strong>${value}</strong></article>`;
+    }
+
+    function readNumber(id) {
+      const number = Number.parseFloat(String(document.getElementById(id).value).replace(',', '.'));
+      return Number.isFinite(number) ? number : 0;
+    }
+
+    function formatNumber(value) {
+      return Number(value).toLocaleString('sk-SK', { maximumFractionDigits: 1 });
+    }
+
+    function showNotice(message) {
+      notice.textContent = message;
+      notice.classList.add('is-visible');
+      window.clearTimeout(showNotice.timeout);
+      showNotice.timeout = window.setTimeout(() => notice.classList.remove('is-visible'), 2600);
+    }
+  </script>
+</body>
+</html>
