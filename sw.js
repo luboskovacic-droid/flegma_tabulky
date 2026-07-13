@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v33-personalized-pwa-loader-20260713';
+const CACHE_NAME = 'flegma-tabulky-v34-food-seeds-347-20260713';
 const APP_SHELL = [
   './',
   './index.html',
