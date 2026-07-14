@@ -577,6 +577,8 @@
                 <select id="mealInput">
                   <option value="ranajky">Ranajky</option>
                   <option value="obed">Obed</option>
+                  <option value="desiata">Desiata</option>
+                  <option value="olovrant">Olovrant</option>
                   <option value="vecera">Vecera</option>
                   <option value="snack">Snack</option>
                 </select>
@@ -636,7 +638,9 @@
     const ALL_DEFAULT_FOODS = [...DEFAULT_FOODS, ...(window.FLEGMA_SLOVAK_FOODS || [])];
     const meals = [
       { id: 'ranajky', label: 'Ranajky' },
+      { id: 'desiata', label: 'Desiata' },
       { id: 'obed', label: 'Obed' },
+      { id: 'olovrant', label: 'Olovrant' },
       { id: 'vecera', label: 'Vecera' },
       { id: 'snack', label: 'Snack' }
     ];
@@ -871,13 +875,14 @@
       if (waterMl < targetWater * 0.75) steps.push(`Dopln vodu: teraz vypi 300-500 ml, dnes ciel cca ${formatNumber(targetWater)} ml.`);
       if (totals.kcal <= 0) steps.push('Zapis prve jedlo. Nemusi byt dokonale, staci gramaz a realny nazov.');
       if (coach.missingProtein > 20) steps.push(`Dalsie jedlo nech ma protein: cielovo dopln este cca ${formatNumber(coach.missingProtein)} g bielkovin.`);
-      if (coach.missingCarbs > 40) steps.push(`Dopln sacharidy jednoducho: ryza, zemiaky, pecivo, ovsene vlocky alebo cestoviny.`);
+      if (coach.missingCarbs > 40) steps.push(`Chybaju sacharidy: dopln este cca ${formatNumber(coach.missingCarbs)} g, napr. ryza, zemiaky, pecivo, ovsene vlocky alebo cestoviny.`);
       if (coach.missingFat > 10 && totals.fat < coach.fatLimit) steps.push(`Chyba tuk: dopln cca ${formatNumber(coach.missingFat)} g, napr. olivovy olej, orechy, vajce alebo losos.`);
+      if (coach.remainingSugar > 8 && coach.missingCarbs > 20) steps.push(`Cukry mozes este doplnit max cca ${formatNumber(coach.remainingSugar)} g; pri carbloade ich pouzi hlavne v tekutom sacharidovom napoji.`);
       if (coach.missingFiber > 6) steps.push(`Chyba vlaknina: dopln cca ${formatNumber(coach.missingFiber)} g zeleninou, ovocim, strukovinou alebo ovsenymi vlockami.`);
       if (totals.fat > coach.fatLimit) steps.push('Tuky su vysoko. Dalsie jedlo daj nizkotucne: tvaroh, jogurt, ryza, zemiaky, chude maso.');
       if (totals.sugar > coach.sugarLimit) steps.push('Cukry su nad limitom. Dalsie sacharidy daj skor skrobove, nie sladke.');
       if (!steps.length) steps.push('Dnes ides dobre. Drz vodu, neprejedaj sa vecer a zapis posledne jedlo.');
-      return steps.slice(0, 3);
+      return steps.slice(0, 5);
     }
 
     function entriesForDate(date) {
@@ -1289,21 +1294,30 @@
     }
 
     function buildMealPlan(coach, dayEntries) {
-      const split = {
-        ranajky: { title: 'Ranajky', ratio: coach.mode === 'carbload' ? 0.28 : 0.25 },
-        obed: { title: 'Obed', ratio: coach.mode === 'carbload' ? 0.32 : 0.35 },
-        snack: { title: 'Snack', ratio: coach.mode === 'carbload' ? 0.17 : 0.15 },
-        vecera: { title: 'Vecera', ratio: coach.mode === 'carbload' ? 0.23 : 0.25 }
-      };
+      const split = coach.mode === 'carbload'
+        ? {
+            ranajky: { title: 'Ranajky', ratio: 0.24, sugarRatio: 0.10 },
+            desiata: { title: 'Desiata - tekute sacharidy', ratio: 0.14, sugarRatio: 0.35, liquid: true },
+            obed: { title: 'Obed', ratio: 0.28, sugarRatio: 0.10 },
+            olovrant: { title: 'Olovrant - tekute sacharidy', ratio: 0.14, sugarRatio: 0.35, liquid: true },
+            vecera: { title: 'Vecera', ratio: 0.20, sugarRatio: 0.10 }
+          }
+        : {
+            ranajky: { title: 'Ranajky', ratio: 0.25 },
+            obed: { title: 'Obed', ratio: 0.35 },
+            snack: { title: 'Snack', ratio: 0.15 },
+            vecera: { title: 'Vecera', ratio: 0.25 }
+          };
 
       return Object.entries(split).map(([mealId, config]) => {
         const eaten = sumEntries(dayEntries.filter((entry) => entry.meal === mealId));
+        const sugarShare = config.sugarRatio || config.ratio;
         const target = {
           kcal: coach.targetKcal * config.ratio,
           protein: coach.targetProtein * config.ratio,
           carbs: coach.targetCarbs * config.ratio,
           fat: coach.targetFat * config.ratio,
-          sugar: coach.sugarLimit * config.ratio,
+          sugar: coach.sugarLimit * sugarShare,
           fiber: coach.fiberTarget * config.ratio
         };
         const left = {
@@ -1317,36 +1331,45 @@
 
         return {
           title: `${config.title} - odporucane ${formatNumber(target.kcal)} kcal`,
-          text: mealText(mealId, coach, target, left, eaten)
+          text: mealText(mealId, coach, target, left, eaten, config)
         };
       });
     }
 
-    function mealText(mealId, coach, target, left, eaten) {
+    function mealText(mealId, coach, target, left, eaten, config = {}) {
       if (eaten.kcal >= target.kcal * 0.85) {
         return `Uz zapisane ${formatNumber(eaten.kcal)} kcal. Zostava len cca ${formatNumber(left.kcal)} kcal, ${formatNumber(left.protein)} g B, ${formatNumber(left.carbs)} g S, ${formatNumber(left.fat)} g T.`;
       }
 
-      const grams = mealGrams(mealId, coach, left);
+      const grams = mealGrams(mealId, coach, left, config);
       const restText = `Zostava: ${formatNumber(left.kcal)} kcal, ${formatNumber(left.protein)} g B, ${formatNumber(left.carbs)} g S, ${formatNumber(left.fat)} g T, cukry max ${formatNumber(left.sugar)} g.`;
       return `${grams} ${restText}`;
     }
 
-    function mealGrams(mealId, coach, left) {
+    function mealGrams(mealId, coach, left, config = {}) {
       const personal = personalMealTemplate(mealId, coach);
       if (personal) return personal;
 
       if (coach.mode === 'carbload') {
-        if (mealId === 'ranajky') return `Stabilne: ryza varena ${gramsForCarbs(left.carbs * 0.58, 28)} g + grecky jogurt ${gramsForProtein(left.protein * 0.55, 9)} g + banan ${gramsForCarbs(left.carbs * 0.14, 22.8)} g.`;
-        if (mealId === 'obed') return `Stabilne: cestoviny varene ${gramsForCarbs(left.carbs * 0.58, 31)} g + kuracie prsia ${gramsForProtein(left.protein * 0.65, 23)} g, tuky nizko.`;
-        if (mealId === 'snack') return `Stabilne: chlieb celozrnny ${gramsForCarbs(left.carbs * 0.45, 41)} g + tvaroh ${gramsForProtein(left.protein * 0.45, 12)} g, bez velkeho cukroveho skoku.`;
-        return `Stabilne: zemiaky varene ${gramsForCarbs(left.carbs * 0.58, 20)} g + tvaroh ${gramsForProtein(left.protein * 0.65, 12)} g.`;
+        if (config.liquid) return carbloadLiquidSnackText(left, mealId);
+        if (mealId === 'ranajky') return `Navys sacharidy: ryza varena ${gramsForCarbs(left.carbs * 0.52, 28)} g + ovsene vlocky ${gramsForCarbs(left.carbs * 0.20, 58.7)} g + grecky jogurt ${gramsForProtein(left.protein * 0.55, 9)} g. Tuky drz nizko.`;
+        if (mealId === 'obed') return `Navys sacharidy: cestoviny varene ${gramsForCarbs(left.carbs * 0.62, 31)} g + kuracie prsia ${gramsForProtein(left.protein * 0.65, 23)} g + pecivo alebo ryza na zvysok sacharidov. Tuky nizko.`;
+        return `Navys sacharidy: zemiaky varene ${gramsForCarbs(left.carbs * 0.62, 20)} g + tvaroh ${gramsForProtein(left.protein * 0.60, 12)} g + pecivo ${gramsForCarbs(left.carbs * 0.18, 41)} g.`;
       }
 
       if (mealId === 'ranajky') return `Ovsene vlocky ${gramsForCarbs(left.carbs * 0.45, 58.7)} g + grecky jogurt ${gramsForProtein(left.protein * 0.70, 9)} g + jablko ${gramsForCarbs(left.carbs * 0.15, 13.8)} g.`;
       if (mealId === 'obed') return `Kuracie prsia ${gramsForProtein(left.protein * 0.75, 23)} g + ryza varena ${gramsForCarbs(left.carbs * 0.65, 28)} g + olivovy olej ${gramsForFat(left.fat * 0.45, 100)} g.`;
       if (mealId === 'snack') return `Tvaroh ${gramsForProtein(left.protein * 0.70, 12)} g + banan ${gramsForCarbs(left.carbs * 0.45, 22.8)} g.`;
       return `Losos ${gramsForProtein(left.protein * 0.65, 20)} g + zemiaky varene ${gramsForCarbs(left.carbs * 0.65, 20)} g.`;
+    }
+
+    function carbloadLiquidSnackText(left, mealId) {
+      const targetDrinkCarbs = Math.max(20, left.carbs * 0.70);
+      const sugarCap = Math.max(15, left.sugar);
+      const maltodextrin = gramsForCarbs(targetDrinkCarbs * 0.65, 95);
+      const juice = gramsForCarbs(Math.min(sugarCap, targetDrinkCarbs * 0.35), 10);
+      const label = mealId === 'desiata' ? 'Desiata' : 'Olovrant';
+      return `${label}: tekute sacharidy - maltodextrin/iontak cca ${maltodextrin} g sacharidov + dzus ${juice} ml alebo sportovy napoj. Ciel je doplnit cukry aj sacharidy bez tuku a bez vlakniny.`;
     }
 
     function personalMealTemplate(mealId, coach) {
