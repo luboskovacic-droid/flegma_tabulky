@@ -4,9 +4,13 @@
   const PROFILE_KEY = 'flegma_tabulky_profile_v1';
   const TRAINING_KEY = 'flegma_tabulky_trainings_v1';
   const NOTIFY_KEY = 'flegma_tabulky_notification_state_v1';
+  const SOUND_KEY = 'flegma_tabulky_notification_sound_v1';
+  const HOURLY_WATER_KEY = 'flegma_tabulky_hourly_water_notify_v1';
+  let notificationAudioContext = null;
+  let hourlyHydrationTimer = null;
 
   window.FlegmaWellness = {
-    keys: { CHECKIN_KEY, DIARY_KEY, PROFILE_KEY, TRAINING_KEY, NOTIFY_KEY },
+    keys: { CHECKIN_KEY, DIARY_KEY, PROFILE_KEY, TRAINING_KEY, NOTIFY_KEY, SOUND_KEY, HOURLY_WATER_KEY },
     today,
     addDays,
     loadProfile,
@@ -28,7 +32,10 @@
     alerts,
     dailyMessages,
     notifyDueMessages,
-    requestNotifications
+    requestNotifications,
+    enableNotificationSound,
+    playNotificationSound,
+    startHourlyHydrationReminders
   };
 
   function today() {
@@ -277,6 +284,9 @@
   }
 
   async function requestNotifications() {
+    enableNotificationSound();
+    localStorage.setItem(HOURLY_WATER_KEY, '1');
+    startHourlyHydrationReminders();
     if (!('Notification' in window)) return 'unsupported';
     if (Notification.permission === 'granted') return 'granted';
     return Notification.requestPermission();
@@ -299,6 +309,7 @@
       if (state[key]) return;
       state[key] = new Date().toISOString();
       showNotification(message.title, message.text);
+      playNotificationSound(message.id);
     });
     localStorage.setItem(NOTIFY_KEY, JSON.stringify(state));
   }
@@ -309,11 +320,89 @@
         body,
         icon: './icon.svg',
         badge: './icon.svg',
+        silent: false,
+        vibrate: [160, 80, 160],
         tag: `flegma-${title}`
       }));
       return;
     }
-    new Notification(title, { body, icon: './icon.svg' });
+    new Notification(title, { body, icon: './icon.svg', silent: false, vibrate: [160, 80, 160] });
+  }
+
+  function startHourlyHydrationReminders() {
+    if (hourlyHydrationTimer || localStorage.getItem(HOURLY_WATER_KEY) !== '1') return;
+    checkHourlyHydrationReminder();
+    hourlyHydrationTimer = window.setInterval(checkHourlyHydrationReminder, 60000);
+  }
+
+  function checkHourlyHydrationReminder() {
+    if (localStorage.getItem(HOURLY_WATER_KEY) !== '1') return;
+    const now = new Date();
+    const hour = now.getHours();
+    if (hour < 8 || hour > 22) return;
+
+    const date = today();
+    const profile = loadProfile();
+    const training = trainingForDate(date);
+    const checkin = checkinForDate(date) || {};
+    const targetWater = hydrationTarget(profile, training);
+    const water = Number(checkin.waterMl) || 0;
+    if (!targetWater || water >= targetWater) return;
+
+    const state = loadNotifyState();
+    const key = `${date}:hourly-water:${hour}`;
+    if (state[key]) return;
+    state[key] = now.toISOString();
+    localStorage.setItem(NOTIFY_KEY, JSON.stringify(state));
+
+    const missing = Math.max(0, targetWater - water);
+    const body = `Voda ${format(water)} / ${format(targetWater)} ml. Dopln cca 300-500 ml, chyba este ${format(missing)} ml.`;
+    if ('Notification' in window && Notification.permission === 'granted') {
+      showNotification('Voda - hodinova kontrola', body);
+    }
+    playNotificationSound('hydration');
+  }
+
+  function enableNotificationSound() {
+    localStorage.setItem(SOUND_KEY, '1');
+    primeNotificationAudio();
+  }
+
+  function primeNotificationAudio() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      notificationAudioContext = notificationAudioContext || new AudioContext();
+      if (notificationAudioContext.state === 'suspended') notificationAudioContext.resume();
+    } catch {}
+  }
+
+  function playNotificationSound(kind = 'default') {
+    if (localStorage.getItem(SOUND_KEY) !== '1') return;
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const context = notificationAudioContext || new AudioContext();
+      notificationAudioContext = context;
+      if (context.state === 'suspended') context.resume();
+      const gain = context.createGain();
+      const first = context.createOscillator();
+      const second = context.createOscillator();
+      const baseFrequency = kind === 'preworkout' ? 740 : kind === 'evening-macros' ? 520 : 660;
+      first.type = 'sine';
+      second.type = 'sine';
+      first.frequency.value = baseFrequency;
+      second.frequency.value = baseFrequency * 1.25;
+      gain.gain.setValueAtTime(0.001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.42);
+      first.connect(gain).connect(context.destination);
+      second.connect(gain);
+      first.start(context.currentTime);
+      second.start(context.currentTime + 0.12);
+      first.stop(context.currentTime + 0.28);
+      second.stop(context.currentTime + 0.45);
+    } catch {}
   }
 
   function loadNotifyState() {

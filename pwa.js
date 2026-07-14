@@ -11,6 +11,7 @@
   function runWellnessNotifications() {
     if (window.FlegmaWellness) {
       window.FlegmaWellness.notifyDueMessages();
+      window.FlegmaWellness.startHourlyHydrationReminders();
       return;
     }
     if (!window.FlegmaPersonalization) {
@@ -28,7 +29,10 @@
     const script = document.createElement('script');
     script.src = './wellness.js';
     script.onload = function () {
-      if (window.FlegmaWellness) window.FlegmaWellness.notifyDueMessages();
+      if (window.FlegmaWellness) {
+        window.FlegmaWellness.notifyDueMessages();
+        window.FlegmaWellness.startHourlyHydrationReminders();
+      }
     };
     document.head.appendChild(script);
   }

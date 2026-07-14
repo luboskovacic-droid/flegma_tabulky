@@ -210,6 +210,37 @@
       font-weight: 700;
     }
 
+    .macro-combined {
+      display: grid;
+      gap: 8px;
+    }
+
+    .macro-combined-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .macro-combined-row span {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+      padding: 7px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #05070a;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .macro-combined-row small {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
     .meal-tabs {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -720,12 +751,12 @@
 
       foodWarning.hidden = Boolean(state.foods.length);
       summary.innerHTML = `
-        ${summaryItem('Kcal', formatNumber(totals.kcal), macroStatus(totals.kcal, coach.targetKcal, 'target'))}
-        ${summaryItem('Bielkoviny', `${formatNumber(totals.protein)} g`, macroStatus(totals.protein, coach.targetProtein, 'target'))}
-        ${summaryItem('Sacharidy', `${formatNumber(totals.carbs)} g`, macroStatus(totals.carbs, coach.targetCarbs, 'target'))}
-        ${summaryItem('Tuky', `${formatNumber(totals.fat)} g`, macroStatus(totals.fat, coach.targetFat, 'target'))}
-        ${summaryItem('Cukry', `${formatNumber(totals.sugar)} g`, macroStatus(totals.sugar, coach.sugarLimit, 'limit'))}
-        ${summaryItem('Vlaknina', `${formatNumber(totals.fiber)} g`, macroStatus(totals.fiber, coach.fiberTarget, 'target'))}
+        ${macroSummaryItem('Kcal', totals.kcal, coach.targetKcal, coach.missingKcal, 'kcal', macroStatus(totals.kcal, coach.targetKcal, 'target'))}
+        ${macroSummaryItem('Bielkoviny', totals.protein, coach.targetProtein, coach.missingProtein, 'g', macroStatus(totals.protein, coach.targetProtein, 'target'))}
+        ${macroSummaryItem('Sacharidy', totals.carbs, coach.targetCarbs, coach.missingCarbs, 'g', macroStatus(totals.carbs, coach.targetCarbs, 'target'))}
+        ${macroSummaryItem('Tuky', totals.fat, coach.targetFat, coach.missingFat, 'g', macroStatus(totals.fat, coach.targetFat, 'target'))}
+        ${macroSummaryItem('Cukry', totals.sugar, coach.sugarLimit, coach.remainingSugar, 'g', macroStatus(totals.sugar, coach.sugarLimit, 'limit'), 'este max')}
+        ${macroSummaryItem('Vlaknina', totals.fiber, coach.fiberTarget, coach.missingFiber, 'g', macroStatus(totals.fiber, coach.fiberTarget, 'target'))}
       `;
 
       hydrationPanel.innerHTML = `
@@ -758,20 +789,6 @@
           <span class="coach-badge">${coach.mode}</span>
         </div>
         ${beginnerCoachHtml(coach, totals, waterMl, targetWater)}
-        <div class="coach-grid">
-          ${coachItem('Kcal zjest', `${formatNumber(coach.targetKcal)} kcal`, macroStatus(totals.kcal, coach.targetKcal, 'target'))}
-          ${coachItem('Bielkoviny zjest', `${formatNumber(coach.targetProtein)} g`, macroStatus(totals.protein, coach.targetProtein, 'target'))}
-          ${coachItem('Sacharidy zjest', `${formatNumber(coach.targetCarbs)} g`, macroStatus(totals.carbs, coach.targetCarbs, 'target'))}
-          ${coachItem('Tuky zjest', `${formatNumber(coach.targetFat)} g`, macroStatus(totals.fat, coach.targetFat, 'target'))}
-          ${coachItem('Cukry max', `${formatNumber(coach.sugarLimit)} g`, macroStatus(totals.sugar, coach.sugarLimit, 'limit'))}
-          ${coachItem('Vlaknina ciel', `${formatNumber(coach.fiberTarget)} g`, macroStatus(totals.fiber, coach.fiberTarget, 'target'))}
-          ${coachItem('Chyba sacharidov', `${formatNumber(coach.missingCarbs)} g`, coach.missingCarbs > 0 ? 'is-low' : 'is-ok')}
-          ${coachItem('Chyba bielkovin', `${formatNumber(coach.missingProtein)} g`, coach.missingProtein > 0 ? 'is-low' : 'is-ok')}
-          ${coachItem('Chyba tukov', `${formatNumber(coach.missingFat)} g`, coach.missingFat > 0 ? 'is-low' : 'is-ok')}
-          ${coachItem('Cukry este max', `${formatNumber(coach.remainingSugar)} g`, coach.remainingSugar <= 0 ? 'is-over' : 'is-ok')}
-          ${coachItem('Chyba vlakniny', `${formatNumber(coach.missingFiber)} g`, coach.missingFiber > 0 ? 'is-low' : 'is-ok')}
-          ${coachItem('Kcal este zjest', `${formatNumber(coach.missingKcal)} kcal`, coach.missingKcal > 0 ? 'is-low' : 'is-ok')}
-        </div>
         <p class="coach-text">${coach.message}</p>
         <div class="meal-plan">
           ${mealPlan.map((meal) => `
@@ -884,6 +901,23 @@
         <div class="summary-item ${status}">
           <span class="summary-label">${label}</span>
           <strong class="summary-value">${value}</strong>
+        </div>
+      `;
+    }
+
+    function macroSummaryItem(label, eaten, target, remaining, unit, status = '', remainingLabel = 'ostava') {
+      const suffix = unit === 'kcal' ? 'kcal' : unit;
+      return `
+        <div class="summary-item ${status}">
+          <span class="summary-label">${label}</span>
+          <div class="macro-combined">
+            <strong class="summary-value">${formatWithUnit(eaten, suffix)}</strong>
+            <div class="macro-combined-row">
+              <span><small>Zjedene</small>${formatWithUnit(eaten, suffix)}</span>
+              <span><small>Ciel</small>${formatWithUnit(target, suffix)}</span>
+              <span><small>${remainingLabel}</small>${formatWithUnit(remaining, suffix)}</span>
+            </div>
+          </div>
         </div>
       `;
     }
@@ -1453,6 +1487,10 @@
       return Number(value).toLocaleString('sk-SK', {
         maximumFractionDigits: 1
       });
+    }
+
+    function formatWithUnit(value, unit) {
+      return `${formatNumber(value)} ${unit}`;
     }
 
     function escapeHtml(value) {

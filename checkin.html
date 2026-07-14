@@ -159,7 +159,7 @@
             </div>
             <button type="submit" class="primary">Ulozit check-in</button>
           </form>
-          <button type="button" id="enableNotifications">Zapnut upozornenia</button>
+          <button type="button" id="enableNotifications">Zapnut upozornenia + zvuk + hodinovu vodu</button>
           <div class="notice" id="notice" role="status"></div>
         </div>
       </aside>
@@ -231,7 +231,7 @@
 
     enableNotifications.addEventListener('click', async () => {
       const result = await FlegmaWellness.requestNotifications();
-      showNotice(result === 'granted' ? 'Upozornenia su povolene.' : 'Upozornenia sa nepodarilo povolit.');
+      showNotice(result === 'granted' ? 'Upozornenia, zvuk a hodinova voda su povolene.' : 'Upozornenia sa nepodarilo povolit.');
       FlegmaWellness.notifyDueMessages(dateInput.value);
     });
 
