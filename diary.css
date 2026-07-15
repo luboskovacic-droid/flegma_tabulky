@@ -375,6 +375,48 @@ button {
   font-size: 18px;
 }
 
+.sugar-coach {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdff;
+}
+
+.sugar-coach h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.sugar-food-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sugar-food-list li {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.sugar-food-list strong {
+  font-size: 14px;
+}
+
+.sugar-food-list span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .fasting-panel {
   display: grid;
   gap: 10px;

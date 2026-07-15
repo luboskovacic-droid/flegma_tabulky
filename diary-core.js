@@ -228,6 +228,7 @@ function render() {
       <span class="coach-badge">${coach.mode}</span>
     </div>
     ${beginnerCoachHtml(coach, totals, waterMl, targetWater)}
+    ${sugarCoachHtml(dayEntries, totals, coach)}
     <p class="coach-text">${coach.message}</p>
     <div class="meal-plan">
       ${mealPlan.map((meal) => `
@@ -323,6 +324,85 @@ function beginnerCoachSteps(coach, totals, waterMl, targetWater) {
   if (totals.sugar > coach.sugarLimit) steps.push('Cukry su nad limitom. Dalsie sacharidy daj skor skrobove, nie sladke.');
   if (!steps.length) steps.push('Dnes ides dobre. Drz vodu, neprejedaj sa vecer a zapis posledne jedlo.');
   return steps.slice(0, 5);
+}
+
+function sugarCoachHtml(dayEntries, totals, coach) {
+  const targets = sugarSplitTargets(coach);
+  const rows = sugarCoachRows(dayEntries);
+  const totalSugarKcal = (totals.glucose + totals.fructose) * 4;
+  const balance = sugarRatioText(totals.fructose, totals.glucose);
+  const list = rows.length
+    ? rows.map((row) => `
+        <li>
+          <strong>${escapeHtml(row.name)}</strong>
+          <span>${escapeHtml(row.mealLabel)} · FR ${formatNumber(row.fructose * 4)} kcal · GLU ${formatNumber(row.glucose * 4)} kcal · pomer ${row.ratioText}</span>
+        </li>
+      `).join('')
+    : '<li><strong>Ziadny zdroj cukrov</strong><span>Po zapise ovocia, dzusu alebo sladkeho jedla tu bude rozpis FR/GLU.</span></li>';
+
+  return `
+    <div class="sugar-coach">
+      <div class="coach-head">
+        <h3>Cukry v jedlach</h3>
+        <span class="coach-badge">${formatNumber(totalSugarKcal)} kcal cukrov</span>
+      </div>
+      <div class="coach-grid">
+        ${coachItem('Fruktoza', `${formatNumber(totals.fructose)} / ${formatNumber(targets.fructose)} g`, macroStatus(totals.fructose, targets.fructose, 'limit'))}
+        ${coachItem('Glukoza', `${formatNumber(totals.glucose)} / ${formatNumber(targets.glucose)} g`, macroStatus(totals.glucose, targets.glucose, 'limit'))}
+        ${coachItem('Pomer FR/GLU', balance, '')}
+        ${coachItem('Cukry spolu', `${formatNumber(totals.sugar)} / ${formatNumber(coach.sugarLimit)} g`, macroStatus(totals.sugar, coach.sugarLimit, 'limit'))}
+      </div>
+      <ul class="sugar-food-list">${list}</ul>
+    </div>
+  `;
+}
+
+function sugarCoachRows(dayEntries) {
+  const groups = new Map();
+  dayEntries.forEach((entry) => {
+    const values = normalizeEntryValues(entry.values || {});
+    const sugar = Number(values.sugar) || 0;
+    if (sugar <= 0.05) return;
+    const key = (entry.foodId || entry.name || '').toString().toLowerCase();
+    const group = groups.get(key) || {
+      name: entry.name || 'Jedlo',
+      sugar: 0,
+      glucose: 0,
+      fructose: 0,
+      count: 0,
+      meals: new Map()
+    };
+    group.sugar += sugar;
+    group.glucose += Number(values.glucose) || 0;
+    group.fructose += Number(values.fructose) || 0;
+    group.count += 1;
+    const meal = entry.meal || 'snack';
+    group.meals.set(meal, (group.meals.get(meal) || 0) + 1);
+    groups.set(key, group);
+  });
+
+  return [...groups.values()]
+    .map((group) => {
+      const mostCommonMeal = [...group.meals.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || 'snack';
+      return {
+        ...group,
+        mealLabel: mealLabel(mostCommonMeal),
+        ratioText: sugarRatioText(group.fructose, group.glucose)
+      };
+    })
+    .sort((a, b) => b.sugar - a.sugar)
+    .slice(0, 6);
+}
+
+function sugarRatioText(fructose, glucose) {
+  const total = Math.max(0, fructose + glucose);
+  if (!total) return '0/0';
+  const fructosePct = Math.round((fructose / total) * 100);
+  return `${fructosePct}/${100 - fructosePct}`;
+}
+
+function mealLabel(mealId) {
+  return meals.find((meal) => meal.id === mealId)?.label || mealId || 'Jedlo';
 }
 
 function entriesForDate(date) {
