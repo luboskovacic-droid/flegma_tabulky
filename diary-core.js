@@ -48,7 +48,6 @@ const timeInput = document.getElementById('timeInput');
 const mealInput = document.getElementById('mealInput');
 const summary = document.getElementById('summary');
 const macroCheckPanel = document.getElementById('macroCheckPanel');
-const sugarPanel = document.getElementById('sugarPanel');
 const hydrationPanel = document.getElementById('hydrationPanel');
 const watchPanel = document.getElementById('watchPanel');
 const fastingPanel = document.getElementById('fastingPanel');
@@ -160,13 +159,11 @@ function render() {
     ${macroSummaryItem('Bielkoviny', totals.protein, coach.targetProtein, coach.missingProtein, 'g', macroStatus(totals.protein, coach.targetProtein, 'target'))}
     ${macroSummaryItem('Sacharidy', totals.carbs, coach.targetCarbs, coach.missingCarbs, 'g', macroStatus(totals.carbs, coach.targetCarbs, 'target'))}
     ${macroSummaryItem('Tuky', totals.fat, coach.targetFat, coach.missingFat, 'g', macroStatus(totals.fat, coach.targetFat, 'target'))}
-    ${macroSummaryItem('Cukry', totals.sugar, coach.sugarLimit, coach.remainingSugar, 'g', macroStatus(totals.sugar, coach.sugarLimit, 'limit'), 'este max')}
+    ${sugarMacroSummaryItem(totals, coach)}
     ${macroSummaryItem('Vlaknina', totals.fiber, coach.fiberTarget, coach.missingFiber, 'g', macroStatus(totals.fiber, coach.fiberTarget, 'target'))}
   `;
 
   if (macroCheckPanel) macroCheckPanel.innerHTML = macroCheckPanelHtml(coach);
-
-  if (sugarPanel) sugarPanel.innerHTML = sugarSplitPanelHtml(totals, coach);
 
   if (hydrationPanel) hydrationPanel.innerHTML = `
     <div class="coach-head">
@@ -346,30 +343,38 @@ function sumEntries(entries) {
   }, { kcal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, glucose: 0, fructose: 0, fiber: 0 });
 }
 
-function sugarSplitPanelHtml(totals, coach) {
+function sugarMacroSummaryItem(totals, coach) {
   const targets = sugarSplitTargets(coach);
+  const status = macroStatus(totals.sugar, coach.sugarLimit, 'limit');
   return `
-    <div class="coach-head">
-      <h2>Cukry: glukoza / fruktoza</h2>
-      <span class="coach-badge">${formatNumber(totals.sugar)} / ${formatNumber(coach.sugarLimit)} g</span>
-    </div>
-    <div class="coach-grid">
-      ${sugarSplitCard('Glukoza', totals.glucose, targets.glucose)}
-      ${sugarSplitCard('Fruktoza', totals.fructose, targets.fructose)}
-      ${sugarSplitCard('Cukry spolu', totals.sugar, coach.sugarLimit)}
-      ${coachItem('Ostava cukrov', `${formatNumber(Math.max(0, coach.sugarLimit - totals.sugar))} g / ${formatNumber(Math.max(0, coach.sugarLimit - totals.sugar) * 4)} kcal`, totals.sugar <= coach.sugarLimit ? 'is-ok' : 'is-over')}
+    <div class="summary-item sugar-summary is-wide ${status}">
+      <span class="summary-label">Cukry</span>
+      <div class="macro-combined">
+        <strong class="summary-value">${formatWithUnit(totals.sugar, 'g')}</strong>
+        <div class="macro-combined-row">
+          <span><small>Zjedene</small>${formatWithUnit(totals.sugar, 'g')} / ${formatNumber(totals.sugar * 4)} kcal</span>
+          <span><small>Ciel</small>${formatWithUnit(coach.sugarLimit, 'g')} / ${formatNumber(coach.sugarLimit * 4)} kcal</span>
+          <span><small>Este max</small>${formatWithUnit(coach.remainingSugar, 'g')} / ${formatNumber(coach.remainingSugar * 4)} kcal</span>
+        </div>
+        <div class="sugar-split-row">
+          ${sugarSplitMini('Glukoza', totals.glucose, targets.glucose)}
+          ${sugarSplitMini('Fruktoza', totals.fructose, targets.fructose)}
+        </div>
+      </div>
     </div>
   `;
 }
 
-function sugarSplitCard(label, used, target) {
+function sugarSplitMini(label, used, target) {
   const remaining = Math.max(0, target - used);
   const status = used > target ? 'is-over' : used >= target * 0.8 ? 'is-low' : 'is-ok';
-  return coachItem(
-    label,
-    `vhodne ${formatNumber(target)} g / ${formatNumber(target * 4)} kcal | minute ${formatNumber(used)} g / ${formatNumber(used * 4)} kcal | ostava ${formatNumber(remaining)} g / ${formatNumber(remaining * 4)} kcal`,
-    status
-  );
+  return `
+    <span class="${status}">
+      <small>${label}</small>
+      <b>${formatNumber(used)} / ${formatNumber(target)} g</b>
+      <em>${formatNumber(used * 4)} / ${formatNumber(target * 4)} kcal · ostava ${formatNumber(remaining)} g</em>
+    </span>
+  `;
 }
 
 function sugarSplitTargets(coach) {
