@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zapis jedla</title>
+  <meta name="theme-color" content="#f7f9fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Flegma">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="diary.css">
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body>
+  <div class="app-shell">
+  <nav class="side-menu" aria-label="Hlavne menu">
+    <div class="menu-block menu-main">
+      <a href="graphs.html">Grafy</a>
+      <a href="diary.html" aria-current="page">Kalorie</a>
+      <a href="calendar.html">Kalendar</a>
+    </div>
+    <div class="menu-block menu-tools">
+      <a href="fit-import.html">FIT import</a>
+      <a href="checkin.html">Check-in</a>
+      <a href="gym.html">Fitko</a>
+      <a href="profile.html">Profil</a>
+      <a href="foods.html">Jedla</a>
+      <a href="recipes.html">Recepty</a>
+      <a href="recommendations.html">Odporucania</a>
+      <a href="notes.html">Poznamky</a>
+      <a href="settings.html">Nastavenie</a>
+      <a href="data.html">Data</a>
+    </div>
+  </nav>
+  <main class="app">
+    <header>
+      <div>
+        <h1>Zapis jedla</h1>
+        <p class="subtitle">Pridavanie jedal a zoznam zapisov v danom dni.</p>
+      </div>
+      <label>
+        Datum
+        <input id="dateInput" type="date">
+      </label>
+    </header>
+
+    <nav class="diary-subnav" aria-label="Kaloricke podstranky">
+      <a href="diary.html">Prehlad</a>
+      <a href="diary-log.html" aria-current="page">Zapis jedla</a>
+      <a href="diary-hydration.html">Hydratacia</a>
+      <a href="diary-fasting.html">Post</a>
+      <a href="foods.html">Databaza jedal</a>
+    </nav>
+
+    <section class="layout">
+      <aside class="panel form-panel">
+        <div class="panel-inner">
+          <h2 class="panel-title">Zapisat jedlo</h2>
+          <form id="entryForm" autocomplete="off">
+            <label>
+              Jedlo
+              <input id="foodInput" list="foodOptions" required placeholder="Zacni pisat nazov jedla...">
+              <datalist id="foodOptions"></datalist>
+            </label>
+            <div class="grid-2">
+              <label>
+                Gramaz
+                <input id="gramsInput" required type="number" min="1" step="1" inputmode="numeric" placeholder="100">
+              </label>
+              <label>
+                Cas jedla
+                <input id="timeInput" type="time">
+              </label>
+            </div>
+            <div class="grid-2">
+              <label>
+                Jedlo dna
+                <select id="mealInput">
+                  <option value="ranajky">Ranajky</option>
+                  <option value="desiata">Desiata</option>
+                  <option value="obed">Obed</option>
+                  <option value="olovrant">Olovrant</option>
+                  <option value="vecera">Vecera</option>
+                  <option value="snack">Snack</option>
+                </select>
+              </label>
+            </div>
+            <button class="primary" type="submit">Pridat do dna</button>
+          </form>
+          <div class="warning" id="foodWarning" hidden>Najprv pridaj jedla do databazy.</div>
+          <div class="notice" id="notice" role="status"></div>
+          <p class="muted">Ak jedlo nie je v zozname, pridaj ho najprv v databaze jedal.</p>
+          <a class="top-link" href="foods.html">Otvorit databazu jedal</a>
+        </div>
+      </aside>
+      <section class="panel">
+        <div class="meal-tabs" id="mealTabs"></div>
+        <div class="entry-list" id="entryList"></div>
+        <div class="empty" id="emptyState">Pre tento den zatial nie je zapisane ziadne jedlo.</div>
+      </section>
+    </section>
+  </main>
+  </div>
+
+  <script src="pwa.js" defer></script>
+  <script src="settings.js" defer></script>
+  <script src="personalization.js"></script>
+  <script src="wellness.js"></script>
+  <script src="food-seeds.js"></script>
+  <script src="diary-core.js"></script>
+</body>
+</html>

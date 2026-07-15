@@ -1,9 +1,12 @@
-const CACHE_NAME = 'flegma-tabulky-v49-macro-kcal-audit-20260715';
+const CACHE_NAME = 'flegma-tabulky-v50-split-diary-pages-20260715';
 const APP_SHELL = [
   './',
   './index.html',
   './profile.html',
   './diary.html',
+  './diary-log.html',
+  './diary-hydration.html',
+  './diary-fasting.html',
   './calendar.html',
   './checkin.html',
   './gym.html',
@@ -17,6 +20,8 @@ const APP_SHELL = [
   './graphs.html',
   './data.html',
   './ui.css',
+  './diary.css',
+  './diary-core.js',
   './pwa.js',
   './settings.js',
   './personalization.js',

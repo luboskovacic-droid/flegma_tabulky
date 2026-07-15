@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kaloricky prehlad</title>
+  <title>Hydratacia a watch</title>
   <meta name="theme-color" content="#f7f9fc">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Flegma">
@@ -36,8 +36,8 @@
   <main class="app">
     <header>
       <div>
-        <h1>Kaloricky prehlad</h1>
-        <p class="subtitle">Denné kcal, makra, cukry a odporucanie jedal.</p>
+        <h1>Hydratacia a watch</h1>
+        <p class="subtitle">Voda, kroky a manualne aktivne kcal zo smart watch.</p>
       </div>
       <label>
         Datum
@@ -46,18 +46,17 @@
     </header>
 
     <nav class="diary-subnav" aria-label="Kaloricke podstranky">
-      <a href="diary.html" aria-current="page">Prehlad</a>
+      <a href="diary.html">Prehlad</a>
       <a href="diary-log.html">Zapis jedla</a>
-      <a href="diary-hydration.html">Hydratacia</a>
+      <a href="diary-hydration.html" aria-current="page">Hydratacia</a>
       <a href="diary-fasting.html">Post</a>
       <a href="foods.html">Databaza jedal</a>
     </nav>
 
     <section class="panel">
-      <div class="summary" id="summary"></div>
-      <div class="coach-panel macro-check-panel" id="macroCheckPanel"></div>
-      <div class="coach-panel sugar-panel" id="sugarPanel"></div>
-      <div class="coach-panel" id="coachPanel"></div>
+      <div class="coach-panel hydration-panel" id="hydrationPanel"></div>
+      <div class="coach-panel watch-panel" id="watchPanel"></div>
+      <div class="notice" id="notice" role="status"></div>
     </section>
   </main>
   </div>

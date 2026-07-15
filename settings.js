@@ -73,6 +73,9 @@
         label: 'Kaloricke',
         pages: [
           ['diary.html', 'Kalorie'],
+          ['diary-log.html', 'Zapis'],
+          ['diary-hydration.html', 'Hydratacia'],
+          ['diary-fasting.html', 'Post'],
           ['foods.html', 'Jedla'],
           ['recipes.html', 'Recepty'],
           ['recommendations.html', 'Odporucania']
