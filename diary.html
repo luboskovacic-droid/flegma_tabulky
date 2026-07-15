@@ -305,6 +305,37 @@
       font-size: 18px;
     }
 
+    .fasting-panel {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fafc;
+    }
+
+    .fasting-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .fasting-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .fasting-row span {
+      color: var(--muted);
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
     .coach-text {
       margin: 0;
       color: var(--muted);
@@ -573,6 +604,13 @@
                 <input id="gramsInput" required type="number" min="1" step="1" inputmode="numeric" placeholder="100">
               </label>
               <label>
+                Cas jedla
+                <input id="timeInput" type="time">
+              </label>
+            </div>
+
+            <div class="grid-2">
+              <label>
                 Jedlo dna
                 <select id="mealInput">
                   <option value="ranajky">Ranajky</option>
@@ -598,6 +636,7 @@
       <section class="panel">
         <div class="summary" id="summary"></div>
         <div class="coach-panel hydration-panel" id="hydrationPanel"></div>
+        <div class="fasting-panel" id="fastingPanel"></div>
         <div class="coach-panel" id="coachPanel"></div>
         <div class="meal-tabs" id="mealTabs"></div>
         <div class="entry-list" id="entryList"></div>
@@ -659,9 +698,11 @@
     const foodInput = document.getElementById('foodInput');
     const foodOptions = document.getElementById('foodOptions');
     const gramsInput = document.getElementById('gramsInput');
+    const timeInput = document.getElementById('timeInput');
     const mealInput = document.getElementById('mealInput');
     const summary = document.getElementById('summary');
     const hydrationPanel = document.getElementById('hydrationPanel');
+    const fastingPanel = document.getElementById('fastingPanel');
     const coachPanel = document.getElementById('coachPanel');
     const mealTabs = document.getElementById('mealTabs');
     const entryList = document.getElementById('entryList');
@@ -671,6 +712,7 @@
 
     dateInput.value = state.date;
     mealInput.value = state.activeMeal;
+    timeInput.value = currentTimeValue();
 
     dateInput.addEventListener('change', () => {
       state.date = dateInput.value || today();
@@ -707,6 +749,7 @@
         id: crypto.randomUUID(),
         date: state.date,
         meal: mealInput.value,
+        time: normalizedTime(timeInput.value) || currentTimeValue(),
         foodId: food.id,
         name: food.name,
         grams,
@@ -717,6 +760,7 @@
       saveEntries();
       foodInput.value = '';
       gramsInput.value = '';
+      timeInput.value = currentTimeValue();
       state.activeMeal = mealInput.value;
       showNotice('Jedlo bolo zapisane.');
       render();
@@ -792,6 +836,8 @@
         </form>
       `;
 
+      fastingPanel.innerHTML = fastingPanelHtml(dayEntries);
+
       coachPanel.innerHTML = `
         <div class="coach-head">
           <h2>AI trener</h2>
@@ -825,7 +871,7 @@
             <div class="entry-head">
               <div>
                 <h3 class="entry-name">${escapeHtml(entry.name)}</h3>
-                <div class="entry-meta">${formatNumber(entry.grams)} g</div>
+                <div class="entry-meta">${entryTimeLabel(entry)} · ${formatNumber(entry.grams)} g</div>
               </div>
               <button type="button" class="danger" onclick="deleteEntry('${entry.id}')">Vymazat</button>
             </div>
@@ -891,7 +937,7 @@
     }
 
     function entriesForDate(date) {
-      return state.entries.filter((entry) => entry.date === date);
+      return sortEntriesByTime(state.entries.filter((entry) => entry.date === date));
     }
 
     function sumEntries(entries) {
@@ -904,6 +950,84 @@
         sum.fiber += entry.values.fiber;
         return sum;
       }, { kcal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, fiber: 0 });
+    }
+
+    function sortEntriesByTime(entries) {
+      return [...entries].sort((a, b) => entryMinutes(a) - entryMinutes(b));
+    }
+
+    function entryTimeLabel(entry) {
+      return normalizedTime(entry.time) || timeFromIso(entry.createdAt) || '--:--';
+    }
+
+    function entryMinutes(entry) {
+      const time = entryTimeLabel(entry);
+      const minutes = minutesFromTime(time);
+      return Number.isFinite(minutes) ? minutes : 24 * 60;
+    }
+
+    function fastingPanelHtml(entries) {
+      const timedEntries = sortEntriesByTime(entries).filter((entry) => Number.isFinite(entryMinutes(entry)));
+      const now = new Date();
+      const isSelectedToday = state.date === today();
+      const endOfWindow = isSelectedToday ? (now.getHours() * 60) + now.getMinutes() : 24 * 60;
+
+      if (!timedEntries.length) {
+        const fastMinutes = isSelectedToday ? endOfWindow : 24 * 60;
+        return `
+          <div class="coach-head">
+            <h2>Postne okno</h2>
+            <span class="coach-badge">${formatDuration(fastMinutes)}</span>
+          </div>
+          <div class="fasting-list">
+            <div class="fasting-row"><strong>Bez jedla</strong><span>${isSelectedToday ? 'od polnoci do teraz' : 'cely den bez zapisu jedla'}</span></div>
+          </div>
+        `;
+      }
+
+      const lastEntry = timedEntries[timedEntries.length - 1];
+      const lastMinutes = entryMinutes(lastEntry);
+      const currentFast = Math.max(0, endOfWindow - lastMinutes);
+      const gaps = timedEntries.slice(1).map((entry, index) => {
+        const previous = timedEntries[index];
+        return {
+          from: previous,
+          to: entry,
+          minutes: Math.max(0, entryMinutes(entry) - entryMinutes(previous))
+        };
+      });
+      const longestGap = gaps.reduce((max, gap) => Math.max(max, gap.minutes), currentFast);
+      const gapRows = gaps.length
+        ? gaps.map((gap) => `<div class="fasting-row"><strong>${formatDuration(gap.minutes)}</strong><span>${entryTimeLabel(gap.from)} ${escapeHtml(gap.from.name)} -> ${entryTimeLabel(gap.to)} ${escapeHtml(gap.to.name)}</span></div>`).join('')
+        : '<div class="fasting-row"><strong>Zatial len 1 jedlo</strong><span>Dalsi zapis ukaze pauzu medzi jedlami.</span></div>';
+
+      return `
+        <div class="coach-head">
+          <h2>Postne okno</h2>
+          <span class="coach-badge">${formatDuration(currentFast)}</span>
+        </div>
+        <div class="coach-grid">
+          ${coachItem('Aktualne bez jedla', formatDuration(currentFast), fastingStatusClass(currentFast))}
+          ${coachItem('Posledne jedlo', `${entryTimeLabel(lastEntry)} ${escapeHtml(lastEntry.name)}`, '')}
+          ${coachItem('Najdlhsie dnes', formatDuration(longestGap), fastingStatusClass(longestGap))}
+          ${coachItem('Pocet jedal', `${timedEntries.length}`, '')}
+        </div>
+        <div class="fasting-list">${gapRows}</div>
+      `;
+    }
+
+    function fastingStatusClass(minutes) {
+      if (minutes >= 14 * 60) return 'is-ok';
+      if (minutes >= 10 * 60) return 'is-low';
+      return '';
+    }
+
+    function formatDuration(minutes) {
+      const safeMinutes = Math.max(0, Math.round(Number(minutes) || 0));
+      const hours = Math.floor(safeMinutes / 60);
+      const rest = safeMinutes % 60;
+      if (!hours) return `${rest} min`;
+      return `${hours} h ${String(rest).padStart(2, '0')} min`;
     }
 
     function summaryItem(label, value, status = '') {
@@ -1490,10 +1614,18 @@
     function loadEntries() {
       try {
         const raw = localStorage.getItem(DIARY_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
+        const entries = raw ? JSON.parse(raw) : [];
+        return Array.isArray(entries) ? entries.map(normalizeEntry) : [];
       } catch {
         return [];
       }
+    }
+
+    function normalizeEntry(entry) {
+      return {
+        ...entry,
+        time: normalizedTime(entry.time) || timeFromIso(entry.createdAt) || ''
+      };
     }
 
     function saveEntries() {
@@ -1507,6 +1639,33 @@
 
     function today() {
       return formatLocalDate(new Date());
+    }
+
+    function currentTimeValue() {
+      const date = new Date();
+      return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    }
+
+    function normalizedTime(value) {
+      const match = String(value || '').match(/^(\d{1,2}):(\d{2})/);
+      if (!match) return '';
+      const hours = Math.max(0, Math.min(23, Number(match[1]) || 0));
+      const minutes = Math.max(0, Math.min(59, Number(match[2]) || 0));
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
+    function timeFromIso(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '';
+      return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    }
+
+    function minutesFromTime(value) {
+      const time = normalizedTime(value);
+      if (!time) return Number.NaN;
+      const [hours, minutes] = time.split(':').map(Number);
+      return (hours * 60) + minutes;
     }
 
     function formatLocalDate(date) {
