@@ -635,6 +635,7 @@
 
       <section class="panel">
         <div class="summary" id="summary"></div>
+        <div class="coach-panel sugar-panel" id="sugarPanel"></div>
         <div class="coach-panel hydration-panel" id="hydrationPanel"></div>
         <div class="coach-panel watch-panel" id="watchPanel"></div>
         <div class="fasting-panel" id="fastingPanel"></div>
@@ -702,6 +703,7 @@
     const timeInput = document.getElementById('timeInput');
     const mealInput = document.getElementById('mealInput');
     const summary = document.getElementById('summary');
+    const sugarPanel = document.getElementById('sugarPanel');
     const hydrationPanel = document.getElementById('hydrationPanel');
     const watchPanel = document.getElementById('watchPanel');
     const fastingPanel = document.getElementById('fastingPanel');
@@ -812,6 +814,8 @@
         ${macroSummaryItem('Vlaknina', totals.fiber, coach.fiberTarget, coach.missingFiber, 'g', macroStatus(totals.fiber, coach.fiberTarget, 'target'))}
       `;
 
+      sugarPanel.innerHTML = sugarSplitPanelHtml(totals, coach);
+
       hydrationPanel.innerHTML = `
         <div class="coach-head">
           <h2>Hydratacia</h2>
@@ -912,6 +916,8 @@
               ${macroItem('S', `${formatNumber(entry.values.carbs)} g`)}
               ${macroItem('T', `${formatNumber(entry.values.fat)} g`)}
               ${macroItem('Cukry', `${formatNumber(entry.values.sugar)} g`)}
+              ${macroItem('Glu', `${formatNumber(entry.values.glucose || 0)} g`)}
+              ${macroItem('Fru', `${formatNumber(entry.values.fructose || 0)} g`)}
               ${macroItem('Vl.', `${formatNumber(entry.values.fiber)} g`)}
             </div>
           </article>
@@ -930,12 +936,15 @@
 
     function calculateValues(food, grams) {
       const ratio = grams / 100;
+      const split = sugarSplitForFood(food);
       return {
         kcal: food.kcal * ratio,
         protein: food.protein * ratio,
         carbs: food.carbs * ratio,
         fat: food.fat * ratio,
         sugar: food.sugar * ratio,
+        glucose: split.glucose * ratio,
+        fructose: split.fructose * ratio,
         fiber: food.fiber * ratio
       };
     }
@@ -978,9 +987,54 @@
         sum.carbs += entry.values.carbs;
         sum.fat += entry.values.fat;
         sum.sugar += entry.values.sugar;
+        sum.glucose += Number(entry.values.glucose) || 0;
+        sum.fructose += Number(entry.values.fructose) || 0;
         sum.fiber += entry.values.fiber;
         return sum;
-      }, { kcal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, fiber: 0 });
+      }, { kcal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, glucose: 0, fructose: 0, fiber: 0 });
+    }
+
+    function sugarSplitPanelHtml(totals, coach) {
+      const targets = sugarSplitTargets(coach);
+      return `
+        <div class="coach-head">
+          <h2>Cukry: glukoza / fruktoza</h2>
+          <span class="coach-badge">${formatNumber(totals.sugar)} / ${formatNumber(coach.sugarLimit)} g</span>
+        </div>
+        <div class="coach-grid">
+          ${sugarSplitCard('Glukoza', totals.glucose, targets.glucose)}
+          ${sugarSplitCard('Fruktoza', totals.fructose, targets.fructose)}
+          ${sugarSplitCard('Cukry spolu', totals.sugar, coach.sugarLimit)}
+          ${coachItem('Ostava cukrov', `${formatNumber(Math.max(0, coach.sugarLimit - totals.sugar))} g / ${formatNumber(Math.max(0, coach.sugarLimit - totals.sugar) * 4)} kcal`, totals.sugar <= coach.sugarLimit ? 'is-ok' : 'is-over')}
+        </div>
+      `;
+    }
+
+    function sugarSplitCard(label, used, target) {
+      const remaining = Math.max(0, target - used);
+      const status = used > target ? 'is-over' : used >= target * 0.8 ? 'is-low' : 'is-ok';
+      return coachItem(
+        label,
+        `vhodne ${formatNumber(target)} g / ${formatNumber(target * 4)} kcal | minute ${formatNumber(used)} g / ${formatNumber(used * 4)} kcal | ostava ${formatNumber(remaining)} g / ${formatNumber(remaining * 4)} kcal`,
+        status
+      );
+    }
+
+    function sugarSplitTargets(coach) {
+      const limit = Math.max(0, Number(coach.sugarLimit) || 0);
+      const fructose = Math.min(coach.mode === 'carbload' ? 45 : 35, limit * (coach.mode === 'carbload' ? 0.35 : 0.45));
+      return {
+        fructose,
+        glucose: Math.max(0, limit - fructose)
+      };
+    }
+
+    function sugarSplitForFood(food) {
+      const sugar = Math.max(0, Number(food.sugar) || 0);
+      const glucose = Math.max(0, Number(food.glucose) || 0);
+      const fructose = Math.max(0, Number(food.fructose) || 0);
+      if (glucose || fructose || !sugar) return { glucose: Math.min(sugar, glucose), fructose: Math.min(sugar, fructose) };
+      return { glucose: sugar / 2, fructose: sugar / 2 };
     }
 
     function sortEntriesByTime(entries) {
@@ -1622,18 +1676,21 @@
       const totals = template.items.reduce((sum, item) => {
         const food = state.foods.find((entry) => entry.id === item.foodId || entry.name === item.name);
         if (!food) return sum;
+        const split = sugarSplitForFood(food);
         const ratio = item.grams / 100;
         sum.kcal += food.kcal * ratio;
         sum.protein += food.protein * ratio;
         sum.carbs += food.carbs * ratio;
         sum.fat += food.fat * ratio;
         sum.sugar += food.sugar * ratio;
+        sum.glucose += split.glucose * ratio;
+        sum.fructose += split.fructose * ratio;
         sum.fiber += food.fiber * ratio;
         return sum;
-      }, { kcal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, fiber: 0 });
+      }, { kcal: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, glucose: 0, fructose: 0, fiber: 0 });
 
       const items = template.items.map((item) => `${item.name} ${formatNumber(item.grams)} g`).join(' + ');
-      return `Tvoje odporucanie: ${items}. Spolu cca ${formatNumber(totals.kcal)} kcal, B ${formatNumber(totals.protein)} g, S ${formatNumber(totals.carbs)} g, T ${formatNumber(totals.fat)} g.`;
+      return `Tvoje odporucanie: ${items}. Spolu cca ${formatNumber(totals.kcal)} kcal, B ${formatNumber(totals.protein)} g, S ${formatNumber(totals.carbs)} g, T ${formatNumber(totals.fat)} g, glukoza ${formatNumber(totals.glucose)} g, fruktoza ${formatNumber(totals.fructose)} g.`;
     }
 
     function gramsForCarbs(targetCarbs, carbsPer100) {
@@ -1703,11 +1760,11 @@
       try {
         const raw = localStorage.getItem(FOOD_STORAGE_KEY);
         const foods = raw ? JSON.parse(raw) : [];
-        const mergedFoods = mergeDefaultFoods(foods);
+        const mergedFoods = mergeDefaultFoods(foods).map(normalizeFoodSugarSplit);
         localStorage.setItem(FOOD_STORAGE_KEY, JSON.stringify(mergedFoods));
         return mergedFoods;
       } catch {
-        return ALL_DEFAULT_FOODS;
+        return ALL_DEFAULT_FOODS.map(normalizeFoodSugarSplit);
       }
     }
 
@@ -1715,6 +1772,14 @@
       const existingNames = new Set(foods.map((food) => food.name.toLowerCase()));
       const missingDefaults = ALL_DEFAULT_FOODS.filter((food) => !existingNames.has(food.name.toLowerCase()));
       return [...foods, ...missingDefaults];
+    }
+
+    function normalizeFoodSugarSplit(food) {
+      const sugar = Math.max(0, Number(food.sugar) || 0);
+      const glucose = Math.max(0, Number(food.glucose) || 0);
+      const fructose = Math.max(0, Number(food.fructose) || 0);
+      if (glucose || fructose || !sugar) return { ...food, sugar, glucose: Math.min(sugar, glucose), fructose: Math.min(sugar, fructose) };
+      return { ...food, sugar, glucose: sugar / 2, fructose: sugar / 2 };
     }
 
     function loadEntries() {
@@ -1728,10 +1793,20 @@
     }
 
     function normalizeEntry(entry) {
+      const values = normalizeEntryValues(entry.values || {});
       return {
         ...entry,
+        values,
         time: normalizedTime(entry.time) || timeFromIso(entry.createdAt) || ''
       };
+    }
+
+    function normalizeEntryValues(values) {
+      const sugar = Math.max(0, Number(values.sugar) || 0);
+      const glucose = Math.max(0, Number(values.glucose) || 0);
+      const fructose = Math.max(0, Number(values.fructose) || 0);
+      if (glucose || fructose || !sugar) return { ...values, sugar, glucose: Math.min(sugar, glucose), fructose: Math.min(sugar, fructose) };
+      return { ...values, sugar, glucose: sugar / 2, fructose: sugar / 2 };
     }
 
     function saveEntries() {

@@ -507,6 +507,17 @@
             </label>
           </div>
 
+          <div class="grid-2">
+            <label>
+              Glukoza
+              <input id="glucose" name="glucose" type="number" min="0" step="0.1" inputmode="decimal">
+            </label>
+            <label>
+              Fruktoza
+              <input id="fructose" name="fructose" type="number" min="0" step="0.1" inputmode="decimal">
+            </label>
+          </div>
+
           <div class="actions">
             <button class="primary" type="submit" id="saveButton">Ulozit</button>
             <button type="button" id="resetButton">Zrusit</button>
@@ -537,6 +548,8 @@
                 <th>Sacharidy</th>
                 <th>Tuky</th>
                 <th>Cukry</th>
+                <th>Glukoza</th>
+                <th>Fruktoza</th>
                 <th>Vlaknina</th>
                 <th>Akcie</th>
               </tr>
@@ -574,7 +587,7 @@
     ];
     const ALL_DEFAULT_FOODS = [...DEFAULT_FOODS, ...(window.FLEGMA_SLOVAK_FOODS || [])];
 
-    const fields = ['name', 'kcal', 'protein', 'carbs', 'fat', 'sugar', 'fiber'];
+    const fields = ['name', 'kcal', 'protein', 'carbs', 'fat', 'sugar', 'glucose', 'fructose', 'fiber'];
     const state = {
       foods: loadFoods(),
       search: ''
@@ -632,6 +645,8 @@
         carbs: readNumber('carbs'),
         fat: readNumber('fat'),
         sugar: readNumber('sugar'),
+        glucose: readNumber('glucose'),
+        fructose: readNumber('fructose'),
         fiber: readNumber('fiber')
       };
     }
@@ -705,6 +720,8 @@
             <td>${formatNumber(food.carbs)} g</td>
             <td>${formatNumber(food.fat)} g</td>
             <td>${formatNumber(food.sugar)} g</td>
+            <td>${formatNumber(food.glucose)} g</td>
+            <td>${formatNumber(food.fructose)} g</td>
             <td>${formatNumber(food.fiber)} g</td>
             <td>
               <div class="row-actions">
@@ -728,6 +745,8 @@
               ${nutritionItem('Sacharidy', food.carbs)}
               ${nutritionItem('Tuky', food.fat)}
               ${nutritionItem('Cukry', food.sugar)}
+              ${nutritionItem('Glukoza', food.glucose)}
+              ${nutritionItem('Fruktoza', food.fructose)}
               ${nutritionItem('Vlaknina', food.fiber)}
             </div>
             <div class="card-actions">
@@ -757,11 +776,11 @@
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         const foods = raw ? JSON.parse(raw) : [];
-        const mergedFoods = mergeDefaultFoods(foods);
+        const mergedFoods = mergeDefaultFoods(foods).map(normalizeFoodSugarSplit);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(mergedFoods));
         return mergedFoods;
       } catch {
-        return ALL_DEFAULT_FOODS;
+        return ALL_DEFAULT_FOODS.map(normalizeFoodSugarSplit);
       }
     }
 
@@ -769,6 +788,14 @@
       const existingNames = new Set(foods.map((food) => food.name.toLowerCase()));
       const missingDefaults = ALL_DEFAULT_FOODS.filter((food) => !existingNames.has(food.name.toLowerCase()));
       return [...foods, ...missingDefaults];
+    }
+
+    function normalizeFoodSugarSplit(food) {
+      const sugar = Math.max(0, Number(food.sugar) || 0);
+      const glucose = Math.max(0, Number(food.glucose) || 0);
+      const fructose = Math.max(0, Number(food.fructose) || 0);
+      if (glucose || fructose || !sugar) return { ...food, sugar, glucose: Math.min(sugar, glucose), fructose: Math.min(sugar, fructose) };
+      return { ...food, sugar, glucose: sugar / 2, fructose: sugar / 2 };
     }
 
     function saveFoods() {
