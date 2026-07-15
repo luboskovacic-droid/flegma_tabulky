@@ -365,6 +365,24 @@
             </div>
             <div class="muted" id="carbPreview">Odhad: 30 g/h, spolu 30 g.</div>
 
+            <div class="grid-2">
+              <label>
+                Charakter planu
+                <select id="planningMode">
+                  <option value="longterm">Dlhodoby plan</option>
+                  <option value="adhoc">Zmena za pochodu</option>
+                </select>
+              </label>
+              <label>
+                Carbload
+                <select id="carbloadMode">
+                  <option value="auto">Auto iba sutaz/dlhy tazky trening</option>
+                  <option value="on">Zapnut carbload</option>
+                  <option value="off">Bez carbloadu</option>
+                </select>
+              </label>
+            </div>
+
             <label>
               Poznamka
               <textarea id="notes" placeholder="trasa, ciel, intervaly, vybava"></textarea>
@@ -429,6 +447,8 @@
         plannedMinutes: readNumber('plannedMinutes'),
         carbsPerHour: calculateCarbsPerHour(value('type'), value('intensity')),
         carbRule: 'auto-intensity',
+        planningMode: value('planningMode') || 'longterm',
+        carbloadMode: value('carbloadMode') || 'auto',
         notes: value('notes'),
         actual: null,
         createdAt: new Date().toISOString()
@@ -468,6 +488,8 @@
             ${meta('Plan', `${formatNumber(training.plannedMinutes)} min`)}
             ${meta('Sacharidy', `${formatNumber(training.carbsPerHour)} g/h`)}
             ${meta('Spolu S', `${formatNumber(totalTrainingCarbs(training))} g`)}
+            ${meta('Typ planu', planningModeLabel(training.planningMode))}
+            ${meta('Carbload', carbloadModeLabel(training))}
             ${meta('GPX', training.gpx ? `${formatNumber(training.gpx.distanceKm)} km / ${training.gpx.difficultyLabel}${training.gpx.carbloadModel ? ` / ${formatNumber(training.gpx.carbloadModel.gramsPerKg)} g/kg` : ''}` : '-')}
             ${meta('Fitko', gymLabel(training.gymMode))}
             ${meta('Realita', training.actual ? `${formatNumber(training.actual.durationMinutes)} min` : '-')}
@@ -556,14 +578,18 @@
           ...training,
           startTime: training.startTime || '09:00',
           carbsPerHour: training.gpx.recommendedCarbsPerHour,
-          carbRule: 'gpx-route'
+          carbRule: 'gpx-route',
+          planningMode: training.planningMode || 'longterm',
+          carbloadMode: training.carbloadMode || 'auto'
         };
       }
       return {
         ...training,
         startTime: training.startTime || '09:00',
         carbsPerHour: calculateCarbsPerHour(training.type, training.intensity),
-        carbRule: 'auto-intensity'
+        carbRule: 'auto-intensity',
+        planningMode: training.planningMode || 'longterm',
+        carbloadMode: training.carbloadMode || 'auto'
       };
     }
 
@@ -598,6 +624,24 @@
         hard: 'tazka',
         race: 'sutaz'
       }[intensity] || intensity;
+    }
+
+    function planningModeLabel(mode) {
+      return mode === 'adhoc' ? 'za pochodu' : 'dlhodoby';
+    }
+
+    function carbloadModeLabel(training) {
+      if (training.carbloadMode === 'on') return 'zapnuty';
+      if (training.carbloadMode === 'off') return 'vypnuty';
+      return isAutoCarbloadTraining(training) ? 'auto ano' : 'auto nie';
+    }
+
+    function isAutoCarbloadTraining(training) {
+      const minutes = Number(training?.plannedMinutes) || 0;
+      if (training?.type === 'race' || training?.intensity === 'race') return true;
+      if (training?.planningMode === 'adhoc') return false;
+      if (training?.type === 'multi' || training?.type === 'brick') return minutes >= 90;
+      return minutes >= 150 && (training?.intensity === 'hard' || training?.intensity === 'race');
     }
 
     function today() {

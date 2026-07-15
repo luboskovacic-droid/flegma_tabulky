@@ -363,7 +363,7 @@
         ${metric('Vlaknina limit', '25 g')}
       `;
       fuelingNote.textContent = training.type === 'race' || profile.goal === 'carbload'
-        ? 'Carbload: 25% treti den, 60% druhy den, 15% v den vykonu. Vysoke sacharidy, nizsie tuky a vlaknina.'
+        ? 'Carbload sa deli podla dlzky a intenzity: dlhy vykon viac dni dopredu, kratsi vykon viac v den vykonu. Ciel je doplnit energiu bez hladovania, tuky a vlakninu drzat nizsie.'
         : 'Bezny trening: sacharidy pocas vykonu nastav podla dlzky a intenzity, pri lahkom kratkom treningu moze stacit voda.';
       zones.innerHTML = zonesData.map((zone) => `
         <div class="zone">
@@ -617,9 +617,9 @@
         total,
         gramsPerKg: model.gramsPerKg,
         model,
-        day3: total * 0.25,
-        day2: total * 0.6,
-        day1: total * 0.15
+        day3: total * carbloadDayPercent(2, model),
+        day2: total * carbloadDayPercent(1, model),
+        day1: total * carbloadDayPercent(0, model)
       };
     }
 
@@ -630,10 +630,11 @@
       const intensityBonus = { easy: 0, steady: 0.8, hard: 1.5, race: 2.2 }[intensity] ?? 0.8;
       const typeBonus = { race: 0.8, brick: 0.5, multi: 0.8, bike: 0.3, run: 0.2, swim: -0.3, fitko: -1 }[type] || 0;
       const goalFactor = { carbload: 1.08, fit: 1, lose: 0.95, waist: 0.95, gain: 1.05 }[goal] || 1;
-      const routeGkg = 3.5 + (hours * 0.8) + (elevation / 700) + intensityBonus + typeBonus;
+      const durationBonus = hours >= 5 ? 2.4 : hours >= 3 ? 1.7 : hours >= 1.5 ? 1.0 : hours >= 0.75 ? 0.45 : 0.1;
+      const routeGkg = 3.2 + durationBonus + (elevation / 700) + intensityBonus + typeBonus;
       const powerKcal = power ? (Number(power) * hours * 3600) / 4184 : 0;
       const powerGkg = powerKcal ? ((powerKcal * 0.65) / 4) / bodyWeight : 0;
-      const gramsPerKg = clampNumber(Math.max(routeGkg, powerGkg * 1.35) * goalFactor, 4, 12);
+      const gramsPerKg = clampNumber(Math.max(routeGkg, powerGkg * 1.35) * goalFactor, 3.5, 12);
       return {
         totalCarbs: bodyWeight * gramsPerKg,
         gramsPerKg,
@@ -642,6 +643,13 @@
         powerKcal,
         goalFactor
       };
+    }
+
+    function carbloadDayPercent(daysToEvent, model) {
+      if (daysToEvent === 2) return model.hours >= 3 ? 0.25 : 0.18;
+      if (daysToEvent === 1) return model.hours >= 3 ? 0.55 : 0.42;
+      if (daysToEvent === 0) return model.hours >= 3 ? 0.25 : 0.40;
+      return 0;
     }
 
     function clampNumber(value, min, max) {

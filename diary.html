@@ -1138,7 +1138,7 @@
       let message = `${dayMode.label}: zjedz cca ${formatNumber(targetProtein)} g B, ${formatNumber(targetCarbs)} g S, ${formatNumber(targetFat)} g T, cukry max ${formatNumber(sugarLimit)} g, vlaknina cca ${formatNumber(fiberTarget)} g.`;
 
       if (isCarbload) {
-        message += ` Carbload ${carbload.label}: ${carbload.percent}% z 3-dnoveho planu, model ${formatNumber(carbload.gramsPerKg)} g/kg podla vykonu/casu/intenzity/prevysenia/hmotnosti/ciela. ${temperamentText(temperament)} Vysoko drz sacharidy celkovo, cukry kontrolovane; vacsina nech ide z ryze, cestovin, zemiakov alebo peciva.`;
+        message += ` Carbload ${carbload.label}: ${carbload.percent}% z 3-dnoveho planu, model ${formatNumber(carbload.gramsPerKg)} g/kg podla vykonu/casu/intenzity/prevysenia/hmotnosti/ciela. ${temperamentText(temperament)} Ciel je doplnit energiu bez hladovania: hlavne jedla vysoko sacharidove, tuky a vlakninu kontrolovane.`;
       } else if (profile.goal === 'carbload') {
         message += ` V profile mas carbload, ale v kalendari nie je trening/sutaz v 3-dnovom okne, preto nepocitam vysoky carbload ciel.`;
       }
@@ -1219,7 +1219,8 @@
       if (!isCarbload) {
         const kcalCarbs = (kcal - (protein * 4) - (fat * 9)) / 4;
         const bounds = carbBounds(profile, mode, training);
-        carbs = clampNumber(Math.max(carbs, kcalCarbs), bounds.min, bounds.max);
+        const trainingFloor = training ? minimumTrainingCarbs(profile, training, mode) : 0;
+        carbs = clampNumber(Math.max(carbs, kcalCarbs, trainingFloor), bounds.min, bounds.max);
       }
       const sugar = isCarbload
         ? carbloadSugarLimit(weight, carbload, training)
@@ -1227,9 +1228,18 @@
       const fiber = Math.max(isCarbload ? 16 : 22, Math.min(isCarbload ? 25 : 40, weight * multipliers.fiber));
 
       const targets = { kcal, protein, carbs, fat, sugar, fiber };
-      return window.FlegmaPersonalization
+      const adaptedTargets = window.FlegmaPersonalization
         ? window.FlegmaPersonalization.adaptMacroTargets(targets, { profile, training, isCarbload })
         : targets;
+      if (training && !isCarbload) {
+        const bounds = carbBounds(profile, mode, training);
+        adaptedTargets.carbs = clampNumber(
+          Math.max(adaptedTargets.carbs, minimumTrainingCarbs(profile, training, mode)),
+          bounds.min,
+          bounds.max
+        );
+      }
+      return adaptedTargets;
     }
 
     function carbBounds(profile, mode, training) {
@@ -1258,6 +1268,25 @@
         min: weight * modeMin,
         max: weight * (modeMax + trainingBonus)
       };
+    }
+
+    function minimumTrainingCarbs(profile, training, mode) {
+      const weight = Number(profile.weight) || 80;
+      const minutes = effectiveTrainingMinutes(training);
+      const hours = minutes / 60;
+      const during = Math.max(0, Number(training.carbsPerHour) || 0) * hours;
+      const baseByMode = {
+        gym: 2.8,
+        training: 3.4,
+        hard: 4.3,
+        multi: 4.8,
+        race: 5.2
+      }[mode] || 3.0;
+      const typeAdd = { swim: 0.25, run: 0.35, bike: 0.45, brick: 0.75, multi: 0.85, race: 1.0, fitko: 0.1 }[training?.type] || 0.3;
+      const intensityAdd = { easy: 0, steady: 0.25, hard: 0.75, race: 1.1 }[training?.intensity] || 0.25;
+      const durationAdd = minutes >= 240 ? 1.2 : minutes >= 150 ? 0.8 : minutes >= 90 ? 0.45 : minutes >= 45 ? 0.2 : 0;
+      const goalFactor = isWaistReduction(profile) || profile.goal === 'lose' ? 0.9 : profile.goal === 'gain' ? 1.08 : 1;
+      return Math.max(weight * baseByMode, ((weight * (2.7 + typeAdd + intensityAdd + durationAdd)) + (during * 0.5)) * goalFactor);
     }
 
     function observePersonalization(date, totals, coach, profile, training, checkin, targetWater) {
@@ -1333,7 +1362,7 @@
         type: event.training?.type
       });
       const total = model.totalCarbs;
-      const percentage = { 2: 0.25, 1: 0.6, 0: 0.15 }[event.daysToEvent] || 0;
+      const percentage = carbloadDayPercent(event.daysToEvent, model);
       return {
         targetCarbs: total * percentage,
         totalCarbs: total,
@@ -1353,10 +1382,11 @@
       const intensityBonus = { easy: 0, steady: 0.8, hard: 1.5, race: 2.2 }[intensity] ?? 0.8;
       const typeBonus = { race: 0.8, brick: 0.5, multi: 0.8, bike: 0.3, run: 0.2, swim: -0.3, fitko: -1 }[type] || 0;
       const goalFactor = { carbload: 1.08, fit: 1, lose: 0.95, waist: 0.95, gain: 1.05 }[goal] || 1;
-      const routeGkg = 3.5 + (hours * 0.8) + (elevation / 700) + intensityBonus + typeBonus;
+      const durationBonus = hours >= 5 ? 2.4 : hours >= 3 ? 1.7 : hours >= 1.5 ? 1.0 : hours >= 0.75 ? 0.45 : 0.1;
+      const routeGkg = 3.2 + durationBonus + (elevation / 700) + intensityBonus + typeBonus;
       const powerKcal = power ? (Number(power) * hours * 3600) / 4184 : 0;
       const powerGkg = powerKcal ? ((powerKcal * 0.65) / 4) / bodyWeight : 0;
-      const gramsPerKg = clampNumber(Math.max(routeGkg, powerGkg * 1.35) * goalFactor, 4, 12);
+      const gramsPerKg = clampNumber(Math.max(routeGkg, powerGkg * 1.35) * goalFactor, 3.5, 12);
       return {
         totalCarbs: bodyWeight * gramsPerKg,
         gramsPerKg,
@@ -1367,6 +1397,13 @@
       };
     }
 
+    function carbloadDayPercent(daysToEvent, model) {
+      if (daysToEvent === 2) return model.hours >= 3 ? 0.25 : 0.18;
+      if (daysToEvent === 1) return model.hours >= 3 ? 0.55 : 0.42;
+      if (daysToEvent === 0) return model.hours >= 3 ? 0.25 : 0.40;
+      return 0;
+    }
+
     function findCarbloadEvent(date) {
       const current = new Date(`${date}T00:00:00`);
       return state.trainings
@@ -1375,7 +1412,7 @@
           const daysToEvent = Math.round((eventDate - current) / 86400000);
           return { training, daysToEvent };
         })
-        .filter((item) => item.daysToEvent >= 0 && item.daysToEvent <= 2)
+        .filter((item) => item.daysToEvent >= 0 && item.daysToEvent <= 2 && shouldUseCarbload(item.training))
         .sort((a, b) => {
           if (a.daysToEvent !== b.daysToEvent) return a.daysToEvent - b.daysToEvent;
           return eventPriority(b.training) - eventPriority(a.training);
@@ -1393,6 +1430,21 @@
       if (training.type === 'multi' || training.type === 'brick') return 3;
       if (training.intensity === 'race' || training.intensity === 'hard') return 2;
       return 1;
+    }
+
+    function shouldUseCarbload(training) {
+      if (!training) return false;
+      if (training.carbloadMode === 'on') return true;
+      if (training.carbloadMode === 'off') return false;
+      const minutes = effectiveTrainingMinutes(training);
+      if (training.type === 'race' || training.intensity === 'race') return true;
+      if (training.planningMode === 'adhoc') return false;
+      if (training.type === 'multi' || training.type === 'brick') return minutes >= 90;
+      return minutes >= 150 && (training.intensity === 'hard' || training.intensity === 'race');
+    }
+
+    function effectiveTrainingMinutes(training) {
+      return Number(training?.gpx?.estimatedMinutes) || Number(training?.actual?.durationMinutes) || Number(training?.plannedMinutes) || 0;
     }
 
     function estimateTargetKcal(profile, targetCarbs, targetProtein, targetFat = null) {

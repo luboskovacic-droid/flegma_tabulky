@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v45-fasting-window-20260715';
+const CACHE_NAME = 'flegma-tabulky-v46-training-carbs-20260715';
 const APP_SHELL = [
   './',
   './index.html',

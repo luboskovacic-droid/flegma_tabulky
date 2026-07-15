@@ -147,11 +147,22 @@
         const daysToEvent = Math.round((eventDate - current) / 86400000);
         return { training, daysToEvent };
       })
-      .filter((item) => item.daysToEvent >= 0 && item.daysToEvent <= 2)
+      .filter((item) => item.daysToEvent >= 0 && item.daysToEvent <= 2 && shouldUseCarbload(item.training))
       .sort((a, b) => {
         if (a.daysToEvent !== b.daysToEvent) return a.daysToEvent - b.daysToEvent;
         return priority(b.training) - priority(a.training);
       })[0] || null;
+  }
+
+  function shouldUseCarbload(training) {
+    if (!training) return false;
+    if (training.carbloadMode === 'on') return true;
+    if (training.carbloadMode === 'off') return false;
+    const minutes = Number(training?.gpx?.estimatedMinutes) || Number(training?.actual?.durationMinutes) || Number(training?.plannedMinutes) || 0;
+    if (training.type === 'race' || training.intensity === 'race') return true;
+    if (training.planningMode === 'adhoc') return false;
+    if (training.type === 'multi' || training.type === 'brick') return minutes >= 90;
+    return minutes >= 150 && (training.intensity === 'hard' || training.intensity === 'race');
   }
 
   function hydrationTarget(profile = loadProfile(), training = trainingForDate(today())) {
