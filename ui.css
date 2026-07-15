@@ -60,53 +60,20 @@ body > main:not(.app) {
   padding: 0 !important;
 }
 
-.menu-toggle {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 35 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  width: 100% !important;
-  min-height: 48px !important;
-  margin: 0 -10px !important;
-  padding: 10px 14px !important;
-  border: 2px solid #005fcc !important;
-  border-radius: 0 0 12px 12px !important;
-  background: #dcebff !important;
-  color: #002f6c !important;
-  font-size: 18px !important;
-  font-weight: 900 !important;
-  line-height: 1 !important;
-  box-shadow: var(--shadow) !important;
-}
-
-.menu-icon {
-  font-size: 24px;
-  line-height: 1;
-}
-
 .side-menu {
-  position: fixed;
-  top: 52px;
-  left: 10px;
-  right: 10px;
-  z-index: 34;
-  display: none;
-  gap: 8px;
-  max-height: calc(100vh - 66px);
-  overflow: auto;
-  margin: 0;
-  padding: 10px;
-  border: 2px solid #9aa8b8;
-  border-radius: 12px;
-  background: #f7f9fc;
-  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.26);
-}
-
-.menu-open .side-menu {
+  position: sticky;
+  top: 0;
+  z-index: 35;
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 8px;
+  border: 2px solid #9aa8b8;
+  border-radius: 0 0 12px 12px;
+  background: #f7f9fc;
+  box-shadow: var(--shadow);
 }
 
 .menu-block {
@@ -118,6 +85,59 @@ body > main:not(.app) {
 .menu-tools {
   padding-top: 8px;
   border-top: 2px solid #c7d0dc;
+}
+
+.top-menu-group {
+  position: relative;
+  min-width: 0;
+}
+
+.top-menu-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 6px;
+  border: 2px solid #9aa8b8;
+  border-radius: 10px;
+  background: #fff;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.1;
+  text-align: center;
+  cursor: pointer;
+  list-style: none;
+  box-shadow: var(--shadow-soft);
+}
+
+.top-menu-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.top-menu-group[open] summary,
+.top-menu-group[data-active-group="true"] summary {
+  border-color: #005fcc;
+  background: #dcebff;
+  color: #002f6c;
+}
+
+.top-menu-links {
+  position: fixed;
+  top: 64px;
+  left: 10px;
+  right: 10px;
+  z-index: 45;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  max-height: calc(100vh - 78px);
+  overflow: auto;
+  padding: 8px;
+  border: 2px solid #9aa8b8;
+  border-radius: 12px;
+  background: #f7f9fc;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.26);
 }
 
 .side-menu a {

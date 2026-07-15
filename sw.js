@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v43-carbload-macros-20260714';
+const CACHE_NAME = 'flegma-tabulky-v44-topbar-hydration-20260715';
 const APP_SHELL = [
   './',
   './index.html',

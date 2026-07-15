@@ -778,11 +778,16 @@
             Dnes vypite spolu ml
             <input id="waterInput" type="number" min="0" max="10000" step="50" inputmode="numeric" value="${waterMl || ''}">
           </label>
-          <div class="preset-row">
-            <button type="button" class="secondary" onclick="addWater(250)">+250 ml</button>
-            <button type="button" class="secondary" onclick="addWater(500)">+500 ml</button>
-            <button type="button" class="secondary" onclick="addWater(750)">+750 ml</button>
-          </div>
+          <label>
+            Rychlo pridat
+            <select id="waterAddSelect">
+              <option value="1">1 ml</option>
+              <option value="100">100 ml</option>
+              <option value="300">300 ml</option>
+              <option value="750">750 ml</option>
+            </select>
+          </label>
+          <button type="button" class="secondary" onclick="addSelectedWater()">Pridat vybrane ml</button>
           <button type="submit">Ulozit vodu</button>
         </form>
       `;
@@ -968,6 +973,11 @@
       }
       showNotice(`Voda +${formatNumber(amount)} ml.`);
       render();
+    }
+
+    function addSelectedWater() {
+      const amount = readNumber(document.getElementById('waterAddSelect')?.value || 0);
+      addWater(amount);
     }
 
     function hydrationStatusClass(water, target) {

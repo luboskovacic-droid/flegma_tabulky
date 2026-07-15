@@ -53,27 +53,66 @@
 
   function setupMenu() {
     const menu = document.querySelector('.side-menu');
-    if (!menu || document.querySelector('.menu-toggle')) return;
+    if (!menu || menu.dataset.normalized === 'true') return;
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'menu-toggle';
-    button.setAttribute('aria-expanded', 'false');
-    button.setAttribute('aria-label', 'Otvorit menu');
-    button.innerHTML = '<span class="menu-icon">☰</span><span>Menu</span>';
-    menu.parentElement.insertBefore(button, menu);
+    const groups = [
+      {
+        id: 'training',
+        label: 'Trening',
+        pages: [
+          ['calendar.html', 'Zoznam/Kalendar'],
+          ['training.html', 'Detail'],
+          ['fit-import.html', 'FIT import'],
+          ['gym.html', 'Fitko'],
+          ['checkin.html', 'Check-in'],
+          ['graphs.html', 'Grafy']
+        ]
+      },
+      {
+        id: 'calories',
+        label: 'Kaloricke',
+        pages: [
+          ['diary.html', 'Kalorie'],
+          ['foods.html', 'Jedla'],
+          ['recipes.html', 'Recepty'],
+          ['recommendations.html', 'Odporucania']
+        ]
+      },
+      {
+        id: 'settings',
+        label: 'Nastavenie',
+        pages: [
+          ['settings.html', 'Nastavenie'],
+          ['profile.html', 'Bio'],
+          ['data.html', 'Data'],
+          ['notes.html', 'Poznamky'],
+          ['index.html', 'Domov']
+        ]
+      }
+    ];
+    const currentPage = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
 
-    button.addEventListener('click', () => {
-      const isOpen = document.body.classList.toggle('menu-open');
-      button.setAttribute('aria-expanded', String(isOpen));
-      button.setAttribute('aria-label', isOpen ? 'Zavriet menu' : 'Otvorit menu');
-    });
+    menu.dataset.normalized = 'true';
+    menu.classList.add('top-tabbar');
+    menu.innerHTML = groups.map((group) => {
+      const isActiveGroup = group.pages.some(([href]) => href.toLowerCase() === currentPage);
+      const links = group.pages.map(([href, label]) => {
+        const isCurrent = href.toLowerCase() === currentPage;
+        return `<a href="${href}"${isCurrent ? ' aria-current="page"' : ''}>${label}</a>`;
+      }).join('');
+      return `<details class="top-menu-group"${isActiveGroup ? ' data-active-group="true"' : ''}>
+        <summary>${group.label}</summary>
+        <div class="top-menu-links">${links}</div>
+      </details>`;
+    }).join('');
 
-    menu.addEventListener('click', (event) => {
-      if (!event.target.closest('a')) return;
-      document.body.classList.remove('menu-open');
-      button.setAttribute('aria-expanded', 'false');
-      button.setAttribute('aria-label', 'Otvorit menu');
+    menu.querySelectorAll('details').forEach((details) => {
+      details.addEventListener('toggle', () => {
+        if (!details.open) return;
+        menu.querySelectorAll('details').forEach((other) => {
+          if (other !== details) other.open = false;
+        });
+      });
     });
   }
 
