@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v48-glucose-fructose-20260715';
+const CACHE_NAME = 'flegma-tabulky-v49-macro-kcal-audit-20260715';
 const APP_SHELL = [
   './',
   './index.html',

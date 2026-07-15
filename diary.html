@@ -635,6 +635,7 @@
 
       <section class="panel">
         <div class="summary" id="summary"></div>
+        <div class="coach-panel macro-check-panel" id="macroCheckPanel"></div>
         <div class="coach-panel sugar-panel" id="sugarPanel"></div>
         <div class="coach-panel hydration-panel" id="hydrationPanel"></div>
         <div class="coach-panel watch-panel" id="watchPanel"></div>
@@ -703,6 +704,7 @@
     const timeInput = document.getElementById('timeInput');
     const mealInput = document.getElementById('mealInput');
     const summary = document.getElementById('summary');
+    const macroCheckPanel = document.getElementById('macroCheckPanel');
     const sugarPanel = document.getElementById('sugarPanel');
     const hydrationPanel = document.getElementById('hydrationPanel');
     const watchPanel = document.getElementById('watchPanel');
@@ -796,7 +798,12 @@
       const waterMl = Number(checkin?.waterMl) || 0;
       const watch = watchSummary(checkin, profile);
       coach.targetKcal += watch.totalKcal;
+      reconcileCoachMacros(coach, profile, dayTraining);
       coach.missingKcal = Math.max(0, coach.targetKcal - totals.kcal);
+      coach.missingCarbs = Math.max(0, coach.targetCarbs - totals.carbs);
+      coach.missingProtein = Math.max(0, coach.targetProtein - totals.protein);
+      coach.missingFat = Math.max(0, coach.targetFat - totals.fat);
+      coach.remainingSugar = Math.max(0, coach.sugarLimit - totals.sugar);
       const mealPlan = buildMealPlan(coach, dayEntries);
       observePersonalization(state.date, totals, coach, profile, dayTraining, checkin, targetWater);
 
@@ -813,6 +820,8 @@
         ${macroSummaryItem('Cukry', totals.sugar, coach.sugarLimit, coach.remainingSugar, 'g', macroStatus(totals.sugar, coach.sugarLimit, 'limit'), 'este max')}
         ${macroSummaryItem('Vlaknina', totals.fiber, coach.fiberTarget, coach.missingFiber, 'g', macroStatus(totals.fiber, coach.fiberTarget, 'target'))}
       `;
+
+      macroCheckPanel.innerHTML = macroCheckPanelHtml(coach);
 
       sugarPanel.innerHTML = sugarSplitPanelHtml(totals, coach);
 
@@ -1159,6 +1168,24 @@
       `;
     }
 
+    function macroCheckPanelHtml(coach) {
+      const macroKcal = macroTargetKcal(coach);
+      const diff = coach.targetKcal - macroKcal;
+      const status = Math.abs(diff) <= 25 ? 'is-ok' : Math.abs(diff) <= 80 ? 'is-low' : 'is-over';
+      return `
+        <div class="coach-head">
+          <h2>Interna kontrola ciela</h2>
+          <span class="coach-badge">${Math.abs(Math.round(diff))} kcal rozdiel</span>
+        </div>
+        <div class="coach-grid">
+          ${coachItem('Ciel kcal', `${formatNumber(coach.targetKcal)} kcal`, '')}
+          ${coachItem('Makra kcal', `${formatNumber(macroKcal)} kcal`, status)}
+          ${coachItem('Rozdiel', `${diff >= 0 ? '+' : ''}${formatNumber(diff)} kcal`, status)}
+          ${coachItem('Dorovnanie', coach.macroAudit?.adjustment || 'OK', status)}
+        </div>
+      `;
+    }
+
     function saveWater(event) {
       event.preventDefault();
       if (!window.FlegmaWellness) return;
@@ -1210,6 +1237,59 @@
         stepKcal,
         totalKcal: manualKcal + stepKcal
       };
+    }
+
+    function reconcileCoachMacros(coach, profile, training) {
+      const before = macroTargetKcal(coach);
+      const diff = coach.targetKcal - before;
+      coach.macroAudit = { before, after: before, diff, adjustment: 'OK' };
+      if (Math.abs(diff) <= 25) return coach;
+
+      if (diff > 0) {
+        const carbShare = coach.mode === 'carbload' ? 0.85 : training ? 0.70 : 0.55;
+        const addedCarbs = (diff * carbShare) / 4;
+        const addedFat = (diff * (1 - carbShare)) / 9;
+        coach.targetCarbs += addedCarbs;
+        coach.targetFat += addedFat;
+        coach.sugarLimit += Math.max(0, addedCarbs * (coach.mode === 'carbload' ? 0.22 : 0.18));
+        coach.macroAudit.adjustment = `+${formatNumber(addedCarbs)} g S, +${formatNumber(addedFat)} g T`;
+      } else {
+        const kcalToRemove = Math.abs(diff);
+        const removableCarbs = Math.max(0, coach.targetCarbs - minimumDisplayCarbs(profile, training));
+        const carbKcal = Math.min(kcalToRemove * 0.75, removableCarbs * 4);
+        coach.targetCarbs -= carbKcal / 4;
+        const remaining = kcalToRemove - carbKcal;
+        const removableFat = Math.max(0, coach.targetFat - minimumDisplayFat(profile));
+        const fatKcal = Math.min(remaining, removableFat * 9);
+        coach.targetFat -= fatKcal / 9;
+        coach.macroAudit.adjustment = `-${formatNumber(carbKcal / 4)} g S, -${formatNumber(fatKcal / 9)} g T`;
+      }
+
+      coach.targetCarbs = Math.max(0, coach.targetCarbs);
+      coach.targetFat = Math.max(0, coach.targetFat);
+      coach.sugarLimit = Math.max(20, coach.sugarLimit);
+      coach.fatLimit = coach.mode === 'carbload' ? coach.targetFat : coach.targetFat * 1.15;
+      coach.macroAudit.after = macroTargetKcal(coach);
+      coach.macroAudit.diff = coach.targetKcal - coach.macroAudit.after;
+      return coach;
+    }
+
+    function macroTargetKcal(coach) {
+      return (Number(coach.targetProtein) || 0) * 4
+        + (Number(coach.targetCarbs) || 0) * 4
+        + (Number(coach.targetFat) || 0) * 9;
+    }
+
+    function minimumDisplayCarbs(profile, training) {
+      const weight = Number(profile.weight) || 80;
+      if (training) return weight * 2.5;
+      if (isWaistReduction(profile) || profile.goal === 'lose') return weight * 1.8;
+      return weight * 2.2;
+    }
+
+    function minimumDisplayFat(profile) {
+      const weight = Number(profile.weight) || 80;
+      return Math.max(35, weight * 0.45);
     }
 
     function hydrationStatusClass(water, target) {
