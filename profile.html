@@ -156,6 +156,36 @@
       gap: 10px;
     }
 
+    .bio-review {
+      display: grid;
+      gap: 10px;
+    }
+
+    .review-card {
+      display: grid;
+      gap: 6px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .review-card.is-ok {
+      border-color: #98d6aa;
+      background: var(--ok-bg);
+    }
+
+    .review-card.is-warn {
+      border-color: #f6d58f;
+      background: var(--warn-bg);
+    }
+
+    .review-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
     .metric {
       display: grid;
       gap: 3px;
@@ -492,6 +522,13 @@
         </div>
       </section>
     </section>
+
+    <section class="panel bio-review-panel">
+      <div class="panel-inner stack">
+        <h2 class="panel-title">Hodnotenie vstupnych dat</h2>
+        <div class="bio-review" id="bioReview"></div>
+      </div>
+    </section>
   </main>
   </div>
 
@@ -514,6 +551,7 @@
     const profileForm = document.getElementById('profileForm');
     const analysisGrid = document.getElementById('analysisGrid');
     const recommendation = document.getElementById('recommendation');
+    const bioReview = document.getElementById('bioReview');
     const notice = document.getElementById('notice');
     const infoModal = document.getElementById('infoModal');
     const infoTitle = document.getElementById('infoTitle');
@@ -649,6 +687,49 @@
         <p>${goalText(profile, targetCalories, carbs, fat)}</p>
         <p>Carbload datum sa berie z kalendara treningov/sutazi, nie z profilu.</p>
       `;
+      bioReview.innerHTML = bioReviewHtml({ profile, age, bmi, bmr, tdee, targetCalories, protein, carbs, fat, weightDelta, waistDelta, body });
+    }
+
+    function bioReviewHtml(data) {
+      const items = buildBioReview(data);
+      return items.map((item) => `
+        <article class="review-card ${item.status}">
+          <strong>${item.title}</strong>
+          <p>${item.text}</p>
+        </article>
+      `).join('');
+    }
+
+    function buildBioReview({ profile, age, bmi, bmr, tdee, targetCalories, protein, carbs, fat, weightDelta, waistDelta, body }) {
+      const items = [];
+      if (!profile.weight || !profile.height || !profile.birthYear) {
+        items.push({ status: 'is-warn', title: 'Chybaju zakladne data', text: 'Dopln rok narodenia, vysku a vahu. Bez toho su kcal, BMR a makra len hruby odhad.' });
+      } else {
+        items.push({ status: 'is-ok', title: 'Zaklad je pouzitelny', text: `${age} rokov, ${formatNumber(profile.weight)} kg, ${formatNumber(profile.height)} cm. BMR ${formatNumber(bmr)} kcal, TDEE ${formatNumber(tdee)} kcal.` });
+      }
+
+      if (bmi) {
+        const bmiText = bmi < 18.5 ? 'BMI je nizke, deficit nerob agresivne.' : bmi > 30 ? 'BMI je vysoko, najvacsi zmysel ma stabilny deficit a kroky.' : bmi > 25 ? 'BMI je mierne vyssie, sleduj hlavne pas a vykon.' : 'BMI je v beznom rozsahu, rozhoduje trend pasa, vahy a vykonu.';
+        items.push({ status: bmi > 30 || bmi < 18.5 ? 'is-warn' : 'is-ok', title: 'BMI a pas', text: `${formatNumber(bmi)} BMI. ${bmiText} Pas/vyska ${body.waistHeightRatio ? formatNumber(body.waistHeightRatio) : '-'} (${body.band || '-'}).` });
+      }
+
+      if (waistDelta !== null) {
+        const direction = waistDelta > 0 ? `Do ciela chyba zhodit cca ${formatNumber(waistDelta)} cm z pasa.` : 'Cielovy pas je splneny alebo nastaveny nad aktualnym pasom.';
+        items.push({ status: waistDelta > 0 ? 'is-warn' : 'is-ok', title: 'Pasovy ciel', text: direction });
+      }
+
+      if (weightDelta !== null) {
+        const direction = weightDelta > 0 ? `Do cielovej vahy chyba cca ${formatNumber(weightDelta)} kg dole.` : weightDelta < 0 ? `Do cielovej vahy chyba cca ${formatNumber(Math.abs(weightDelta))} kg hore.` : 'Cielova vaha je presne aktualna.';
+        items.push({ status: Math.abs(weightDelta) > 8 ? 'is-warn' : 'is-ok', title: 'Vahovy ciel', text: direction });
+      }
+
+      items.push({ status: 'is-ok', title: 'Denný start', text: `Prijem zacni okolo ${formatNumber(targetCalories)} kcal. Protein cca ${formatNumber(protein)} g, sacharidy ${formatCarbRange(carbs)}, tuky aspon ${formatNumber(fat)} g.` });
+      return items;
+    }
+
+    function formatCarbRange(carbs) {
+      if (!carbs || !carbs.min) return '-';
+      return `${formatNumber(carbs.min)}-${formatNumber(carbs.max)} g`;
     }
 
     function calculateBmr(profile, age) {

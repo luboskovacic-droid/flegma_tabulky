@@ -636,6 +636,7 @@
       <section class="panel">
         <div class="summary" id="summary"></div>
         <div class="coach-panel hydration-panel" id="hydrationPanel"></div>
+        <div class="coach-panel watch-panel" id="watchPanel"></div>
         <div class="fasting-panel" id="fastingPanel"></div>
         <div class="coach-panel" id="coachPanel"></div>
         <div class="meal-tabs" id="mealTabs"></div>
@@ -702,6 +703,7 @@
     const mealInput = document.getElementById('mealInput');
     const summary = document.getElementById('summary');
     const hydrationPanel = document.getElementById('hydrationPanel');
+    const watchPanel = document.getElementById('watchPanel');
     const fastingPanel = document.getElementById('fastingPanel');
     const coachPanel = document.getElementById('coachPanel');
     const mealTabs = document.getElementById('mealTabs');
@@ -787,10 +789,13 @@
       const dayTraining = findTrainingForDate(state.date);
       const event = findCarbloadEvent(state.date);
       const coach = calculateCoach(profile, totals, event, dayTraining);
-      const mealPlan = buildMealPlan(coach, dayEntries);
       const checkin = window.FlegmaWellness ? FlegmaWellness.checkinForDate(state.date) : null;
       const targetWater = window.FlegmaWellness ? FlegmaWellness.hydrationTarget(profile, dayTraining) : Math.round((profile.weight || 80) * 35);
       const waterMl = Number(checkin?.waterMl) || 0;
+      const watch = watchSummary(checkin, profile);
+      coach.targetKcal += watch.totalKcal;
+      coach.missingKcal = Math.max(0, coach.targetKcal - totals.kcal);
+      const mealPlan = buildMealPlan(coach, dayEntries);
       observePersonalization(state.date, totals, coach, profile, dayTraining, checkin, targetWater);
 
       foodOptions.innerHTML = state.foods
@@ -833,6 +838,32 @@
           </label>
           <button type="button" class="secondary" onclick="addSelectedWater()">Pridat vybrane ml</button>
           <button type="submit">Ulozit vodu</button>
+        </form>
+      `;
+
+      watchPanel.innerHTML = `
+        <div class="coach-head">
+          <h2>Smart watch / mimo appku</h2>
+          <span class="coach-badge">+${formatNumber(watch.totalKcal)} kcal</span>
+        </div>
+        <div class="coach-grid">
+          ${coachItem('Manual kcal', `${formatNumber(watch.manualKcal)} kcal`, watch.manualKcal ? 'is-ok' : '')}
+          ${coachItem('Kroky', `${formatNumber(watch.steps)}`, watch.steps >= 8000 ? 'is-ok' : watch.steps >= 4000 ? 'is-low' : '')}
+          ${coachItem('Odhad z krokov', `${formatNumber(watch.stepKcal)} kcal`, watch.stepKcal ? 'is-ok' : '')}
+          ${coachItem('Novy kcal ciel', `${formatNumber(coach.targetKcal)} kcal`, '')}
+        </div>
+        <form class="inline-water" onsubmit="saveWatchData(event)">
+          <div class="grid-2">
+            <label>
+              Manualne aktivne kcal
+              <input id="watchKcalInput" type="number" min="0" max="10000" step="1" inputmode="numeric" value="${watch.manualKcal || ''}">
+            </label>
+            <label>
+              Kroky
+              <input id="stepsInput" type="number" min="0" max="100000" step="1" inputmode="numeric" value="${watch.steps || ''}">
+            </label>
+          </div>
+          <button type="submit">Prepocitat den</button>
         </form>
       `;
 
@@ -1102,6 +1133,29 @@
     function addSelectedWater() {
       const amount = readNumber(document.getElementById('waterAddSelect')?.value || 0);
       addWater(amount);
+    }
+
+    function saveWatchData(event) {
+      event.preventDefault();
+      if (!window.FlegmaWellness) return;
+      const manualKcal = clampNumber(readNumber(document.getElementById('watchKcalInput')?.value), 0, 10000);
+      const steps = clampNumber(readNumber(document.getElementById('stepsInput')?.value), 0, 100000);
+      FlegmaWellness.upsertCheckin(state.date, { watchKcal: manualKcal, steps });
+      showNotice('Smart watch kcal a kroky boli prepocitane.');
+      render();
+    }
+
+    function watchSummary(checkin, profile) {
+      const manualKcal = Math.max(0, Number(checkin?.watchKcal) || 0);
+      const steps = Math.max(0, Number(checkin?.steps) || 0);
+      const weight = Number(profile.weight) || 80;
+      const stepKcal = Math.round(steps * weight * 0.0005);
+      return {
+        manualKcal,
+        steps,
+        stepKcal,
+        totalKcal: manualKcal + stepKcal
+      };
     }
 
     function hydrationStatusClass(water, target) {

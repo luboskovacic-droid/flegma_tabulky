@@ -266,10 +266,19 @@
       <section class="panel">
         <div class="panel-inner">
           <h2 class="panel-title">Import pred treningom</h2>
-          <label>
-            GPX trasa
-            <input id="gpxInput" type="file" accept=".gpx,application/gpx+xml,text/xml">
-          </label>
+          <div class="grid-2">
+            <label>
+              GPX trasa
+              <input id="gpxInput" type="file" accept=".gpx,application/gpx+xml,text/xml">
+            </label>
+            <form class="stack" onsubmit="savePropositions(event)">
+              <label>
+                Propozicie
+                <textarea id="propositionsInput" placeholder="start, limit, obcerstvovacky, povinna vybava, taktika"></textarea>
+              </label>
+              <button type="submit">Ulozit propozicie</button>
+            </form>
+          </div>
           <div class="metric-grid" id="gpxMetrics"></div>
           <div class="note" id="gpxNote">GPX pouzijem na vzdialenost, prevysenie a odhad narocnosti carbloadu.</div>
         </div>
@@ -316,6 +325,7 @@
     const fuelingNote = document.getElementById('fuelingNote');
     const zones = document.getElementById('zones');
     const gpxInput = document.getElementById('gpxInput');
+    const propositionsInput = document.getElementById('propositionsInput');
     const gpxMetrics = document.getElementById('gpxMetrics');
     const gpxNote = document.getElementById('gpxNote');
     const fitInput = document.getElementById('fitInput');
@@ -331,6 +341,7 @@
 
     gpxInput.addEventListener('change', importGpx);
     fitInput.addEventListener('change', importFit);
+    if (propositionsInput && training) propositionsInput.value = training.propositions || '';
     render();
 
     function render() {
@@ -421,6 +432,14 @@
         ${metric('Body', formatNumber(gpxAnalysis.points))}
       `;
       gpxNote.textContent = `GPX je ulozene k treningu. Plan sacharidov je prepocitany na ${formatNumber(gpxAnalysis.recommendedCarbsPerHour)} g/h. ${gpxAnalysis.note}`;
+    }
+
+    function savePropositions(event) {
+      event.preventDefault();
+      if (!training || !propositionsInput) return;
+      training.propositions = propositionsInput.value.trim();
+      saveTrainings();
+      render();
     }
 
     function renderFit() {

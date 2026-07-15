@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v46-training-carbs-20260715';
+const CACHE_NAME = 'flegma-tabulky-v47-bio-watch-propositions-20260715';
 const APP_SHELL = [
   './',
   './index.html',
