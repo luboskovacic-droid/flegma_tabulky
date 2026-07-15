@@ -1,4 +1,4 @@
-const CACHE_NAME = 'flegma-tabulky-v52-sugar-coach-list-20260715';
+const CACHE_NAME = 'flegma-tabulky-v53-sugar-ratio-warnings-20260715';
 const APP_SHELL = [
   './',
   './index.html',

@@ -389,6 +389,54 @@ button {
   font-size: 16px;
 }
 
+.sugar-quality,
+.sugar-alert,
+.sugar-timing-row {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.sugar-quality strong,
+.sugar-alert strong,
+.sugar-timing-row strong {
+  font-size: 14px;
+}
+
+.sugar-quality span,
+.sugar-alert span,
+.sugar-timing-row span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.sugar-quality.is-ok,
+.sugar-food-list li.is-ok,
+.sugar-timing-row.is-ok {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.sugar-quality.is-low,
+.sugar-food-list li.is-low,
+.sugar-timing-row.is-low {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.sugar-quality.is-over,
+.sugar-food-list li.is-over,
+.sugar-timing-row.is-over,
+.sugar-alert {
+  border-color: #fecaca;
+  background: #fff1f2;
+}
+
 .sugar-food-list {
   display: grid;
   gap: 6px;
@@ -415,6 +463,24 @@ button {
   font-size: 13px;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+.sugar-food-list em {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.sugar-timing {
+  display: grid;
+  gap: 6px;
+}
+
+.sugar-timing h4 {
+  margin: 2px 0 0;
+  font-size: 14px;
 }
 
 .fasting-panel {

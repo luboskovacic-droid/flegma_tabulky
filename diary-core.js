@@ -228,7 +228,7 @@ function render() {
       <span class="coach-badge">${coach.mode}</span>
     </div>
     ${beginnerCoachHtml(coach, totals, waterMl, targetWater)}
-    ${sugarCoachHtml(dayEntries, totals, coach)}
+    ${sugarCoachHtml(dayEntries, totals, coach, dayTraining)}
     <p class="coach-text">${coach.message}</p>
     <div class="meal-plan">
       ${mealPlan.map((meal) => `
@@ -326,16 +326,20 @@ function beginnerCoachSteps(coach, totals, waterMl, targetWater) {
   return steps.slice(0, 5);
 }
 
-function sugarCoachHtml(dayEntries, totals, coach) {
+function sugarCoachHtml(dayEntries, totals, coach, training) {
   const targets = sugarSplitTargets(coach);
   const rows = sugarCoachRows(dayEntries);
   const totalSugarKcal = (totals.glucose + totals.fructose) * 4;
   const balance = sugarRatioText(totals.fructose, totals.glucose);
+  const quality = sugarRatioQuality(totals, targets);
+  const warning = sugarWarningHtml(rows, totals, targets);
+  const timing = sugarTimingHtml(dayEntries, training, coach);
   const list = rows.length
     ? rows.map((row) => `
-        <li>
+        <li class="${row.quality.className}">
           <strong>${escapeHtml(row.name)}</strong>
           <span>${escapeHtml(row.mealLabel)} · FR ${formatNumber(row.fructose * 4)} kcal · GLU ${formatNumber(row.glucose * 4)} kcal · pomer ${row.ratioText}</span>
+          <em>${row.quality.label}</em>
         </li>
       `).join('')
     : '<li><strong>Ziadny zdroj cukrov</strong><span>Po zapise ovocia, dzusu alebo sladkeho jedla tu bude rozpis FR/GLU.</span></li>';
@@ -346,6 +350,11 @@ function sugarCoachHtml(dayEntries, totals, coach) {
         <h3>Cukry v jedlach</h3>
         <span class="coach-badge">${formatNumber(totalSugarKcal)} kcal cukrov</span>
       </div>
+      <div class="sugar-quality ${quality.className}">
+        <strong>${quality.label}</strong>
+        <span>${quality.text}</span>
+      </div>
+      ${warning}
       <div class="coach-grid">
         ${coachItem('Fruktoza', `${formatNumber(totals.fructose)} / ${formatNumber(targets.fructose)} g`, macroStatus(totals.fructose, targets.fructose, 'limit'))}
         ${coachItem('Glukoza', `${formatNumber(totals.glucose)} / ${formatNumber(targets.glucose)} g`, macroStatus(totals.glucose, targets.glucose, 'limit'))}
@@ -353,6 +362,7 @@ function sugarCoachHtml(dayEntries, totals, coach) {
         ${coachItem('Cukry spolu', `${formatNumber(totals.sugar)} / ${formatNumber(coach.sugarLimit)} g`, macroStatus(totals.sugar, coach.sugarLimit, 'limit'))}
       </div>
       <ul class="sugar-food-list">${list}</ul>
+      ${timing}
     </div>
   `;
 }
@@ -387,7 +397,8 @@ function sugarCoachRows(dayEntries) {
       return {
         ...group,
         mealLabel: mealLabel(mostCommonMeal),
-        ratioText: sugarRatioText(group.fructose, group.glucose)
+        ratioText: sugarRatioText(group.fructose, group.glucose),
+        quality: sugarRatioQuality(group, { fructose: group.sugar * 0.45, glucose: group.sugar * 0.55 })
       };
     })
     .sort((a, b) => b.sugar - a.sugar)
@@ -399,6 +410,111 @@ function sugarRatioText(fructose, glucose) {
   if (!total) return '0/0';
   const fructosePct = Math.round((fructose / total) * 100);
   return `${fructosePct}/${100 - fructosePct}`;
+}
+
+function sugarRatioQuality(values, targets) {
+  const fructose = Math.max(0, Number(values.fructose) || 0);
+  const glucose = Math.max(0, Number(values.glucose) || 0);
+  const total = fructose + glucose;
+  if (!total) return { className: 'is-ok', label: 'Ideal', text: 'Zatial bez cukrovej zataze.' };
+  const fructoseShare = fructose / total;
+  const fructoseOver = fructose - Math.max(0, Number(targets.fructose) || 0);
+  const glucoseOver = glucose - Math.max(0, Number(targets.glucose) || 0);
+
+  if (fructoseOver > 12 || glucoseOver > 18 || fructoseShare > 0.65 || fructoseShare < 0.25) {
+    return { className: 'is-over', label: 'Cervena', text: 'Velka odchylka FR/GLU alebo prekroceny ciel.' };
+  }
+  if (fructoseOver > 4 || glucoseOver > 8 || fructoseShare > 0.56 || fructoseShare < 0.35) {
+    return { className: 'is-low', label: 'Oranzova', text: 'Mierna odchylka, dalsie sacharidy daj skor skrobove.' };
+  }
+  return { className: 'is-ok', label: 'Zelena', text: 'Pomer FR/GLU je v rozumnom pasme.' };
+}
+
+function sugarWarningHtml(rows, totals, targets) {
+  const fructoseOver = Math.max(0, totals.fructose - targets.fructose);
+  const glucoseOver = Math.max(0, totals.glucose - targets.glucose);
+  if (fructoseOver <= 0 && glucoseOver <= 0) return '';
+
+  const source = rows.find((row) => fructoseOver >= glucoseOver ? row.fructose >= row.glucose : row.glucose > row.fructose) || rows[0];
+  const sourceName = source?.name || 'sladke jedlo';
+  const overText = fructoseOver >= glucoseOver
+    ? `Fruktoza je o ${formatNumber(fructoseOver)} g nad cielom.`
+    : `Glukoza je o ${formatNumber(glucoseOver)} g nad cielom.`;
+  const replacement = replacementText(source);
+
+  return `
+    <div class="sugar-alert">
+      <strong>Automaticke varovanie</strong>
+      <span>Pridal si dalsie ${escapeHtml(sourceName)}. ${overText}</span>
+      <span>${replacement}</span>
+    </div>
+  `;
+}
+
+function replacementText(source) {
+  const sugar = Math.max(0, Number(source?.sugar) || 0);
+  if (!source || sugar <= 0) return 'Odporucana nahrada: dalsie sacharidy dopln ryzou, zemiakmi alebo cestovinami.';
+  const riceGrams = gramsForCarbs(sugar, 28);
+  return `Odporucana nahrada: namiesto ${escapeHtml(source.name)} pridaj cca ${riceGrams} g varenej ryze.`;
+}
+
+function sugarTimingHtml(dayEntries, training, coach) {
+  if (!training) return `
+    <div class="sugar-timing">
+      <h4>Pred / pocas / po vykone</h4>
+      <div class="sugar-timing-row"><strong>Bez treningu</strong><span>Dnes nie je vykon v kalendari, cukry drz hlavne okolo aktivneho dna a mimo sladkych spiciek.</span></div>
+    </div>
+  `;
+
+  const rows = sugarTimingRows(dayEntries, training, coach);
+  return `
+    <div class="sugar-timing">
+      <h4>Pred / pocas / po vykone</h4>
+      ${rows.map((row) => `
+        <div class="sugar-timing-row ${row.status}">
+          <strong>${row.label}</strong>
+          <span>${formatNumber(row.sugar)} / ${formatNumber(row.target)} g cukrov · FR ${formatNumber(row.fructose * 4)} kcal · GLU ${formatNumber(row.glucose * 4)} kcal</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function sugarTimingRows(dayEntries, training, coach) {
+  const start = minutesFromTime(training.startTime || '09:00') || (9 * 60);
+  const duration = Math.max(30, effectiveTrainingMinutes(training) || Number(training.plannedMinutes) || 60);
+  const end = start + duration;
+  const targets = sugarTimingTargets(training, coach);
+  const buckets = {
+    before: { label: 'Pred vykonom', target: targets.before, sugar: 0, glucose: 0, fructose: 0 },
+    during: { label: 'Pocas vykonu', target: targets.during, sugar: 0, glucose: 0, fructose: 0 },
+    after: { label: 'Po vykone', target: targets.after, sugar: 0, glucose: 0, fructose: 0 }
+  };
+
+  dayEntries.forEach((entry) => {
+    const minutes = entryMinutes(entry);
+    if (!Number.isFinite(minutes)) return;
+    const values = normalizeEntryValues(entry.values || {});
+    let bucket = 'before';
+    if (minutes >= start && minutes <= end) bucket = 'during';
+    if (minutes > end) bucket = 'after';
+    buckets[bucket].sugar += Number(values.sugar) || 0;
+    buckets[bucket].glucose += Number(values.glucose) || 0;
+    buckets[bucket].fructose += Number(values.fructose) || 0;
+  });
+
+  return Object.values(buckets).map((bucket) => ({
+    ...bucket,
+    status: macroStatus(bucket.sugar, bucket.target, 'limit')
+  }));
+}
+
+function sugarTimingTargets(training, coach) {
+  const hours = Math.max(0.5, (effectiveTrainingMinutes(training) || Number(training?.plannedMinutes) || 60) / 60);
+  const during = Math.min(coach.sugarLimit * 0.45, Math.max(12, (Number(training?.carbsPerHour) || 45) * hours * 0.45));
+  const before = Math.max(8, coach.sugarLimit * 0.25);
+  const after = Math.max(8, coach.sugarLimit - before - during);
+  return { before, during, after };
 }
 
 function mealLabel(mealId) {
